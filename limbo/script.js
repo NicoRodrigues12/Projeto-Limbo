@@ -8,7 +8,7 @@ function loop(agora) {
   desenhar();
   requestAnimationFrame(loop);
 }
-
+carregarFase(0)
 reiniciar();
 requestAnimationFrame((t) => {
   ultimo = t;

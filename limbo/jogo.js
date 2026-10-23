@@ -5,7 +5,15 @@ function atualizar(dt) {
     return;
   }
   if (estado === "venceu") {
-    if (teclas["Enter"]) { mortes = 0; reiniciar(); }
+    if (teclas["Enter"]) {
+      if (numeroFase < FASES.length - 1) {
+        carregarFase(numeroFase + 1);
+      } else {
+        mortes = 0;
+        carregarFase(0);
+      }
+      reiniciar();
+    }
     return;
   }
 
@@ -14,7 +22,7 @@ function atualizar(dt) {
   const pular    = teclas["Space"] || teclas["ArrowUp"] || teclas["KeyW"];
 
   // --- movimento horizontal ---
-  const agachar = teclas["ArrowDown"] || teclas["KeyS"];
+const agachar = teclas["ShiftLeft"] || teclas["ShiftRight"];
 
   // --- agachar / levantar ---
   if (agachar && jogador.noChao && !jogador.agachado) {
@@ -38,10 +46,6 @@ function atualizar(dt) {
   if (esquerda) { jogador.vx = -velocidade; jogador.olhaEsquerda = true; }
   if (direita)  { jogador.vx =  velocidade; jogador.olhaEsquerda = false; }
   if (pular && jogador.noChao && !jogador.agachado) {
-    jogador.vy = FORCA_PULO;
-    jogador.noChao = false;
-  }
-  if (pular && jogador.noChao) {
     jogador.vy = FORCA_PULO;
     jogador.noChao = false;
   }
@@ -97,15 +101,15 @@ vinheta.addColorStop(0, "rgba(0,0,0,0)");
 vinheta.addColorStop(1, "rgba(0,0,0,0.65)");
 
 function desenhar() {
-  // Fundo com gradiente.
+  // ===== 1) FUNDO (tudo aqui fica ATRÁS de todo o resto) =====
   const ceu = ctx.createLinearGradient(0, 0, 0, ALTURA);
   ceu.addColorStop(0, paleta.ceuCima);
   ceu.addColorStop(1, paleta.ceuBaixo);
   ctx.fillStyle = ceu;
   ctx.fillRect(0, 0, LARGURA, ALTURA);
 
-  // Imagem de fundo opcional (fundo.png).
-  if (fundo.complete && fundo.naturalWidth > 0) {
+  // Imagem de fundo opcional (só na floresta)
+  if (faseAtual.cenario !== "cidade" && fundo.complete && fundo.naturalWidth > 0) {
     const escalaFundo = Math.max(ALTURA / fundo.height, (LARGURA * 1.3) / fundo.width);
     const larguraFundo = fundo.width * escalaFundo;
     const alturaFundo = fundo.height * escalaFundo;
@@ -113,31 +117,53 @@ function desenhar() {
     ctx.drawImage(fundo, -progresso * (larguraFundo - LARGURA), (ALTURA - alturaFundo) / 2, larguraFundo, alturaFundo);
   }
 
-  // Árvores em camadas, com efeito de profundidade.
-  camadaGalhos(0.3, 0.45, 100, 220);
-  camadaGalhos(0.6, 0.85, 130, 200);
+  if (faseAtual.cenario === "cidade") {
+    camadaPredios(0.15, 0.4, 170, 190);   // prédios lá longe
+    desenharFumaca();
+    camadaPredios(0.45, 0.9, 130, 130);   // prédios mais perto
+  } else {
+    camadaGalhos(0.3, 0.45, 100, 220, 0.6);    // árvores lá longe: bem claras
+    camadaGalhos(0.6, 0.85, 130, 200, 0.35);   // árvores mais perto
 
-  // Elementos que acompanham a câmera.
+    // névoa rente ao chão
+    const nev = ctx.createLinearGradient(0, 200, 0, 400);
+    nev.addColorStop(0, rgba(paleta.ceuBaixo, 0));
+    nev.addColorStop(1, rgba(paleta.ceuBaixo, 0.45));
+    ctx.fillStyle = nev;
+    ctx.fillRect(0, 200, LARGURA, 250);
+  }
+
+  // ===== 2) MUNDO (acompanha a câmera, por cima do fundo) =====
   ctx.save();
   ctx.translate(-Math.round(camera), 0);
+
   ctx.fillStyle = "#050505";
   for (const p of plataformas) ctx.fillRect(p.x, p.y, p.w, p.h);
 
   for (const e of espinhos) {
-    for (let x = e.x; x < e.x + e.w; x += 20) {
-      ctx.beginPath();
-      ctx.moveTo(x, e.y + e.h);
-      ctx.lineTo(x + 10, e.y);
-      ctx.lineTo(x + 20, e.y + e.h);
-      ctx.fill();
+    if (faseAtual.cenario === "cidade") {
+      desenharCones(e);
+    } else {
+      for (let x = e.x; x < e.x + e.w; x += 20) {
+        ctx.beginPath();
+        ctx.moveTo(x, e.y + e.h);
+        ctx.lineTo(x + 10, e.y);
+        ctx.lineTo(x + 20, e.y + e.h);
+        ctx.fill();
+      }
     }
   }
 
-  desenharGrama();
+  if (faseAtual.cenario === "cidade") {
+    desenharChao();
+  } else {
+    desenharGrama();
+  }
   desenharObjetos();
+  desenharObjetosCidade();
   desenharInstrucoes();
 
-  // Luz que marca o fim da fase.
+  // Luz que marca o fim da fase
   ctx.save();
   ctx.shadowColor = paleta.luz;
   ctx.shadowBlur = 40;
@@ -148,16 +174,20 @@ function desenhar() {
   desenharLanterna(75);
   desenharBoneco();
   desenharAbrigos();
+  desenharFrenteCidade();
   desenharMonstro();
   ctx.restore();
+  
+    // ===== 3) POR CIMA DE TUDO (fixo na tela) =====
+  if (faseAtual.cenario === "cidade") desenharCinzas();
 
-  // Vinheta e contador de mortes ficam fixos na tela.
   ctx.fillStyle = vinheta;
   ctx.fillRect(0, 0, LARGURA, ALTURA);
   ctx.fillStyle = "rgba(255,255,255,0.75)";
   ctx.font = "16px Georgia, serif";
   ctx.textAlign = "left";
   ctx.fillText("Mortes: " + mortes, 16, 28);
+  ctx.fillText("Fase " + (numeroFase + 1), 16, 48);
 
   if (estado === "morto") {
     ctx.fillStyle = "rgba(0,0,0," + Math.min(1, 1.2 - contador / 50) + ")";
@@ -167,6 +197,9 @@ function desenhar() {
     ctx.fillStyle = "rgba(0,0,0,0.7)";
     ctx.fillRect(0, 0, LARGURA, ALTURA);
     textoCentral("Você chegou à luz.", ALTURA / 2 - 6, 34);
-    textoCentral("Aperte Enter para jogar de novo", ALTURA / 2 + 30, 18);
+    textoCentral(
+      numeroFase < FASES.length - 1 ? "Aperte Enter para a próxima fase" : "Aperte Enter para jogar de novo",
+      ALTURA / 2 + 30, 18
+    );
   }
 }

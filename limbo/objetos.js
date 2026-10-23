@@ -1,32 +1,3 @@
-const objetos = [
-  { tipo: "placa",     x: 170 },
-  { tipo: "pedra",     x: 290, s: 1 },
-  { tipo: "toco",      x: 520 },
-  { tipo: "cerca",     x: 740 },
-  { tipo: "cogumelos", x: 960 },
-  { tipo: "pedra",     x: 1170, s: 0.7 },
-  { tipo: "lanterna",  x: 1250 },
-  { tipo: "galhos",    x: 1360 },
-  { tipo: "corrente",  x: 1530, y: 0, comp: 120 },
-  { tipo: "lapide",    x: 1600 },
-  { tipo: "toco",      x: 1860 },
-  { tipo: "lanterna",  x: 2000 },
-  { tipo: "cogumelos", x: 2250 },
-  { tipo: "corrente",  x: 2355, y: 0, comp: 150 },
-  { tipo: "galhos",    x: 2440 },
-  { tipo: "pedra",     x: 2985, s: 0.8 },
-  { tipo: "moita",   x: 330 },
-  { tipo: "muro",    x: 545 },
-  { tipo: "tronco",  x: 900 },
-  { tipo: "rochedo", x: 1160 },
-  { tipo: "moita",   x: 1385 },
-  { tipo: "tronco",  x: 1620 },
-  { tipo: "muro",    x: 1848 },
-  { tipo: "rochedo", x: 2250 },
-  { tipo: "moita",   x: 2462 },
-  { tipo: "rochedo", x: 3000 },
-];
-
 function desenharObjetos() {
   const t = performance.now() / 1000;
 

@@ -1,16 +1,37 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LIMBO</title>
-  <link rel="stylesheet" href="./style.css">
+  <title>Limbo</title>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      display: block;
+      /* ocupa o máximo da janela mantendo a proporção 16:9 */
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: auto;
+      aspect-ratio: 16 / 9;
+    }
+  </style>
 </head>
 <body>
   <canvas id="tela" width="800" height="450"></canvas>
-  <p>Setas ou A / D para andar · Espaço ou W para pular · S ou seta para baixo para agachar · R reinicia · 1 a 5 trocam a cor do cenário</p>
 
-  <!-- Scripts clássicos: a ordem importa porque compartilham variáveis globais. -->
+  <!-- Scripts clássicos: a ordem importa porque compartilham variáveis -->
   <script src="./config.js"></script>
   <script src="./fase.js"></script>
   <script src="./jogador.js"></script>
@@ -19,7 +40,18 @@
   <script src="./monstro.js"></script>
   <script src="./cenario.js"></script>
   <script src="./objetos.js"></script>
+  <script src="./cidade.js"></script>
   <script src="./jogo.js"></script>
   <script src="./script.js"></script>
+
+  <!-- Tecla F alterna tela cheia -->
+  <script>
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "KeyF") {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+      }
+    });
+  </script>
 </body>
 </html>
