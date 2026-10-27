@@ -8,8 +8,10 @@ function loop(agora) {
   desenhar();
   requestAnimationFrame(loop);
 }
-carregarFase(0)
-reiniciar();
+
+voltarAoMenu();
+
+
 requestAnimationFrame((t) => {
   ultimo = t;
   loop(t);

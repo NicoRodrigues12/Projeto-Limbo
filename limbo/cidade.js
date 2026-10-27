@@ -779,4 +779,494 @@ function desenharPredio(o) {
     ctx.stroke();
   
     ctx.restore();
+  } 
+
+  // ---------- BLOCOS SOLTOS (caixote, viga, laje) ----------
+// O visual vem do campo "estilo" da plataforma em fase.js. A colisão continua sendo o retângulo.
+function desenharBlocos() {
+  const t = performance.now() / 1000;
+  for (const p of plataformas) {
+    if (!p.estilo) continue;
+    if (p.x + p.w < camera - 40 || p.x > camera + LARGURA + 40) continue;   // fora da tela
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+      if (p.estilo === "caixote") blocoCaixote(p);
+    else if (p.estilo === "viga") blocoViga(p, t);
+    else if (p.estilo === "laje") blocoLaje(p);
+    else if (p.estilo === "pedra") blocoPedra(p);
+    else if (p.estilo === "tabua") blocoTabua(p, t);
+    else if (p.estilo === "massa") blocoMassa(p, t);
+    ctx.restore();
   }
+}
+
+// Caixa de madeira: travessas em X (uma já quebrou), pregos e um canto lascado
+function blocoCaixote(p) {
+  const { x, y, w, h } = p;
+
+  ctx.fillStyle = "#070606";
+  ctx.beginPath();
+  ctx.moveTo(x, y + h);
+  ctx.lineTo(x, y);
+  ctx.lineTo(x + w * 0.62, y);
+  ctx.lineTo(x + w * 0.7, y + 3);                    // lasca no topo
+  ctx.lineTo(x + w * 0.82, y + 1.5);
+  ctx.lineTo(x + w, y);
+  ctx.lineTo(x + w, y + h);
+  ctx.closePath();
+  ctx.fill();
+
+  // moldura e travessas
+  const m = 4;
+  ctx.strokeStyle = "#221f1e";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(x + m, y + m, w - m * 2, h - m * 2);
+  ctx.beginPath();
+  ctx.moveTo(x + m, y + m);
+  ctx.lineTo(x + w - m, y + h - m);                  // travessa inteira
+  ctx.moveTo(x + w - m, y + m);
+  ctx.lineTo(x + w * 0.58, y + h * 0.42);            // a outra quebrou no meio
+  ctx.stroke();
+
+  // pregos
+  ctx.fillStyle = "#34302f";
+  for (const [nx, ny] of [[x + m, y + m], [x + w - m, y + m], [x + m, y + h - m], [x + w - m, y + h - m]]) {
+    ctx.beginPath();
+    ctx.arc(nx, ny, 1.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // tábua solta saindo pela lateral
+  ctx.strokeStyle = "#0a0909";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x + w, y + h * 0.3);
+  ctx.lineTo(x + w + 6, y + h * 0.22);
+  ctx.stroke();
+
+  // luz do pôr do sol na borda de cima
+  ctx.strokeStyle = rgba(paleta.luz, 0.28);
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x, y + 0.6);
+  ctx.lineTo(x + w * 0.62, y + 0.6);
+  ctx.moveTo(x + w * 0.82, y + 0.6);
+  ctx.lineTo(x + w, y + 0.6);
+  ctx.stroke();
+}
+
+// Viga de aço pendurada por cabos, com treliça e pontas retorcidas
+function blocoViga(p, t) {
+  const { x, y, w, h } = p;
+
+  // cabos que seguram a viga (desenhados antes, ficam atrás)
+  ctx.strokeStyle = "#0b0a0a";
+  ctx.lineWidth = 1.6;
+  for (const fx of [x + w * 0.18, x + w * 0.82]) {
+    const bal = Math.sin(t * 0.9 + fx) * 2;
+    ctx.beginPath();
+    ctx.moveTo(fx, y);
+    ctx.quadraticCurveTo(fx + bal, y / 2, fx + bal * 0.5, 0);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(fx, y - 3, 3, 0, Math.PI * 2);           // argola
+    ctx.stroke();
+  }
+
+  // corpo e mesas (abas) de cima e de baixo
+  ctx.fillStyle = "#080707";
+  ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = "#151211";
+  ctx.fillRect(x, y, w, 4);
+  ctx.fillRect(x, y + h - 4, w, 4);
+
+  // treliça em X na alma
+  ctx.strokeStyle = "#1f1b1a";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  for (let px = x; px < x + w - 1; px += 20) {
+    const q = Math.min(px + 20, x + w);
+    ctx.moveTo(px, y + 4); ctx.lineTo(q, y + h - 4);
+    ctx.moveTo(q, y + 4);  ctx.lineTo(px, y + h - 4);
+  }
+  ctx.stroke();
+
+  // rebites
+  ctx.fillStyle = "#2d2928";
+  for (let px = x + 6; px < x + w - 3; px += 12) {
+    ctx.beginPath();
+    ctx.arc(px, y + 2, 0.9, 0, Math.PI * 2);
+    ctx.arc(px, y + h - 2, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // pontas arrebentadas
+  ctx.fillStyle = "#080707";
+  ctx.beginPath();
+  ctx.moveTo(x + w, y);
+  ctx.lineTo(x + w + 9, y + 3);
+  ctx.lineTo(x + w + 3, y + 8);
+  ctx.lineTo(x + w + 12, y + 13);
+  ctx.lineTo(x + w, y + h);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x - 6, y + 5);
+  ctx.lineTo(x - 2, y + 10);
+  ctx.lineTo(x, y + h);
+  ctx.closePath();
+  ctx.fill();
+
+  // luz do pôr do sol
+  ctx.strokeStyle = rgba(paleta.luz, 0.3);
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x, y + 0.6);
+  ctx.lineTo(x + w, y + 0.6);
+  ctx.stroke();
+}
+
+// Laje de concreto: topo reto, embaixo todo lascado, vergalhões nas pontas
+function blocoLaje(p) {
+  const { x, y, w, h } = p;
+
+  ctx.fillStyle = "#080707";
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w, y);
+  ctx.lineTo(x + w, y + h - 3);
+  for (let k = 7; k >= 0; k--) {
+    const px = x + (w * k) / 7;
+    ctx.lineTo(px + 3, y + h - ruido(x + k) * 9);
+    ctx.lineTo(px, y + h - 2 - ruido(x + k + 5) * 6);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // camadas e rachaduras
+  ctx.strokeStyle = "#1d1a19";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x + 4, y + 10);
+  ctx.lineTo(x + w * 0.45, y + 10);
+  ctx.moveTo(x + w * 0.52, y + 10);
+  ctx.lineTo(x + w - 4, y + 10);
+  ctx.moveTo(x + w * 0.35, y + 1);
+  ctx.lineTo(x + w * 0.3, y + 12);
+  ctx.lineTo(x + w * 0.38, y + 22);
+  ctx.moveTo(x + w * 0.74, y + 10);
+  ctx.lineTo(x + w * 0.7, y + 18);
+  ctx.stroke();
+
+  // vergalhões saindo das pontas
+  ctx.strokeStyle = "#2a2625";
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(x, y + 9);
+  ctx.lineTo(x - 9, y + 11);
+  ctx.lineTo(x - 12, y + 6);
+  ctx.moveTo(x + w, y + 17);
+  ctx.lineTo(x + w + 10, y + 15);
+  ctx.lineTo(x + w + 13, y + 20);
+  ctx.stroke();
+
+  // luz do pôr do sol
+  ctx.strokeStyle = rgba(paleta.luz, 0.28);
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x, y + 0.6);
+  ctx.lineTo(x + w, y + 0.6);
+  ctx.stroke();
+}
+
+// ---------- BLOCOS DA FLORESTA ----------
+
+// Pedra empilhada (degraus): topo lascado, fileiras de pedras e rachadura
+function blocoPedra(p) {
+  const { x, y, w, h } = p;
+
+  ctx.fillStyle = "#070707";
+  ctx.beginPath();
+  ctx.moveTo(x, y + h);
+  ctx.lineTo(x, y + 4);
+  ctx.lineTo(x + w * 0.25, y);
+  ctx.lineTo(x + w * 0.5, y + 2);
+  ctx.lineTo(x + w * 0.78, y);
+  ctx.lineTo(x + w, y + 3);
+  ctx.lineTo(x + w, y + h);
+  ctx.closePath();
+  ctx.fill();
+
+  // juntas das pedras, desencontradas de uma fileira para outra
+  ctx.strokeStyle = "#1c1a19";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  let fila = 0;
+  for (let topo = y; topo < y + h - 3; topo += 18) {
+    const base = Math.min(topo + 18, y + h);
+    if (base < y + h) { ctx.moveTo(x, base); ctx.lineTo(x + w, base); }
+    const off = fila % 2 ? w * 0.65 : w * 0.35;
+    ctx.moveTo(x + off, topo + 1);
+    ctx.lineTo(x + off, base);
+    fila++;
+  }
+  ctx.stroke();
+
+  // rachadura
+  ctx.strokeStyle = "#232120";
+  ctx.beginPath();
+  const rx = x + w * (0.2 + ruido(x) * 0.5);
+  ctx.moveTo(rx, y + 2);
+  ctx.lineTo(rx - 4, y + h * 0.35);
+  ctx.lineTo(rx + 3, y + h * 0.6);
+  ctx.stroke();
+
+  // luz na borda de cima
+  ctx.strokeStyle = rgba(paleta.luz, 0.22);
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.25, y + 0.6);
+  ctx.lineTo(x + w * 0.5, y + 2.6);
+  ctx.moveTo(x + w * 0.78, y + 0.6);
+  ctx.lineTo(x + w, y + 3.6);
+  ctx.stroke();
+}
+
+// Plataforma de tábuas pendurada por cordas, com cipós embaixo
+function blocoTabua(p, t) {
+  const { x, y, w, h } = p;
+
+  // cordas (ficam atrás)
+  ctx.strokeStyle = "#0b0a0a";
+  ctx.lineWidth = 1.5;
+  for (const fx of [x + 10, x + w - 10]) {
+    const bal = Math.sin(t * 0.9 + fx) * 2;
+    ctx.beginPath();
+    ctx.moveTo(fx, y);
+    ctx.quadraticCurveTo(fx + bal, y / 2, fx + bal * 0.5, 0);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = "#070606";
+  ctx.fillRect(x, y, w, h);
+
+  // emendas das tábuas e veio da madeira
+  ctx.strokeStyle = "#1e1b1a";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  for (let px = x + 30; px < x + w - 5; px += 30) {
+    ctx.moveTo(px, y + 1);
+    ctx.lineTo(px, y + h - 1);
+  }
+  ctx.moveTo(x + 3, y + h / 2);
+  ctx.lineTo(x + w - 3, y + h / 2);
+  ctx.stroke();
+
+  // pregos
+  ctx.fillStyle = "#34302f";
+  for (let px = x + 6; px < x + w - 3; px += 30) {
+    ctx.beginPath();
+    ctx.arc(px, y + 4, 1, 0, Math.PI * 2);
+    ctx.arc(px, y + h - 4, 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ponta quebrada com farpas
+  ctx.fillStyle = "#070606";
+  ctx.beginPath();
+  ctx.moveTo(x + w, y);
+  ctx.lineTo(x + w + 7, y + 4);
+  ctx.lineTo(x + w + 2, y + 9);
+  ctx.lineTo(x + w + 8, y + h - 2);
+  ctx.lineTo(x + w, y + h);
+  ctx.closePath();
+  ctx.fill();
+
+  // cipós pendurados
+  ctx.strokeStyle = "#0b0a0a";
+  ctx.lineWidth = 1.3;
+  for (const f of [0.2, 0.55, 0.85]) {
+    const bal = Math.sin(t * 1.3 + f * 9) * 2;
+    ctx.beginPath();
+    ctx.moveTo(x + w * f, y + h);
+    ctx.quadraticCurveTo(x + w * f + bal, y + h + 8, x + w * f + bal * 1.5, y + h + 14 + f * 8);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = rgba(paleta.luz, 0.25);
+  ctx.beginPath();
+  ctx.moveTo(x, y + 0.6);
+  ctx.lineTo(x + w, y + 0.6);
+  ctx.stroke();
+}
+
+// Massa de terra e raízes (o túnel baixo): rachaduras e raízes pendendo
+function blocoMassa(p, t) {
+  const { x, y, w, h } = p;
+
+  ctx.fillStyle = "#060606";
+  ctx.beginPath();
+  ctx.moveTo(x, y + h);
+  ctx.lineTo(x - 4, y + h * 0.5);
+  ctx.lineTo(x + 6, y + 14);
+  ctx.lineTo(x + w * 0.3, y);
+  ctx.lineTo(x + w * 0.7, y + 8);
+  ctx.lineTo(x + w - 6, y + 2);
+  ctx.lineTo(x + w + 4, y + h * 0.45);
+  ctx.lineTo(x + w, y + h);
+  for (let k = 8; k >= 0; k--) {                       // barriga irregular, sempre dentro da hitbox
+    ctx.lineTo(x + (w * k) / 8, y + h - (k % 2 ? 4 + ruido(x + k) * 6 : 0));
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // rachaduras
+  ctx.strokeStyle = "#1d1a19";
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.3, y + 6);
+  ctx.lineTo(x + w * 0.24, y + h * 0.3);
+  ctx.lineTo(x + w * 0.34, y + h * 0.55);
+  ctx.lineTo(x + w * 0.28, y + h * 0.8);
+  ctx.moveTo(x + w * 0.7, y + 14);
+  ctx.lineTo(x + w * 0.78, y + h * 0.4);
+  ctx.lineTo(x + w * 0.72, y + h * 0.7);
+  ctx.stroke();
+
+  // raízes caindo pelas laterais e pendendo por baixo
+  ctx.strokeStyle = "#0a0909";
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  for (let k = 0; k < 6; k++) {
+    const rx = x + 8 + k * ((w - 16) / 5);
+    const bal = Math.sin(t * 1.1 + k * 1.7) * 1.5;
+    ctx.beginPath();
+    ctx.moveTo(rx, y + h - 4);
+    ctx.quadraticCurveTo(rx + bal, y + h + 3, rx + bal * 1.6, y + h + 8 + (k % 3) * 3);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = rgba(paleta.luz, 0.2);
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.3, y + 0.6);
+  ctx.lineTo(x + w * 0.7, y + 8.6);
+  ctx.stroke();
+}
+
+// ---------- ABRIGOS DA CIDADE ----------
+// "rochedo" vira bloco de concreto e "muro" ganha tijolos faltando e ferro exposto
+function desenharAbrigoCidade(o) {
+  ctx.save();
+  ctx.translate(o.x, 380);          // (0,0) = base no chão
+  ctx.fillStyle = "#030303";
+  ctx.strokeStyle = "#030303";
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  if (o.tipo === "rochedo") {
+    // laje caída, encostada atrás do bloco
+    ctx.fillStyle = "#0a0909";
+    ctx.beginPath();
+    ctx.moveTo(-24, -46);
+    ctx.lineTo(24, -76);
+    ctx.lineTo(30, -69);
+    ctx.lineTo(-18, -39);
+    ctx.closePath();
+    ctx.fill();
+
+    // bloco principal, com cantos quebrados
+    ctx.fillStyle = "#030303";
+    ctx.beginPath();
+    ctx.moveTo(-38, 1);
+    ctx.lineTo(-38, -34);
+    ctx.lineTo(-30, -48);
+    ctx.lineTo(-8, -50);
+    ctx.lineTo(-4, -44);
+    ctx.lineTo(22, -46);
+    ctx.lineTo(38, -36);
+    ctx.lineTo(38, 1);
+    ctx.closePath();
+    ctx.fill();
+
+    // rachaduras
+    ctx.strokeStyle = "#1f1c1b";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(-14, -48); ctx.lineTo(-20, -30); ctx.lineTo(-12, -16); ctx.lineTo(-18, -2);
+    ctx.moveTo(16, -44);  ctx.lineTo(22, -26);
+    ctx.stroke();
+
+    // vergalhões saindo do topo
+    ctx.strokeStyle = "#2a2625";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-26, -48); ctx.lineTo(-30, -60); ctx.lineTo(-24, -66);
+    ctx.moveTo(4, -45);   ctx.lineTo(8, -58);
+    ctx.stroke();
+
+    // luz do pôr do sol
+    ctx.strokeStyle = rgba(paleta.luz, 0.22);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-30, -47.4); ctx.lineTo(-8, -49.4);
+    ctx.moveTo(-4, -43.4);  ctx.lineTo(22, -45.4);
+    ctx.stroke();
+
+  } else if (o.tipo === "muro") {
+    ctx.beginPath();
+    ctx.moveTo(-45, 1);
+    ctx.lineTo(-45, -52);
+    ctx.lineTo(-30, -54);
+    ctx.lineTo(-24, -46);
+    ctx.lineTo(-10, -48);
+    ctx.lineTo(-6, -58);
+    ctx.lineTo(12, -56);
+    ctx.lineTo(18, -44);
+    ctx.lineTo(34, -46);
+    ctx.lineTo(45, -40);
+    ctx.lineTo(45, 1);
+    ctx.closePath();
+    ctx.fill();
+
+    // tijolos faltando: deixam um pouco de luz passar
+    ctx.fillStyle = rgba(paleta.luz, 0.08);
+    ctx.fillRect(-22, -32, 10, 10);
+    ctx.fillRect(14, -22, 10, 10);
+    ctx.fillRect(-4, -12, 10, 10);
+
+    // juntas dos tijolos, desencontradas
+    ctx.strokeStyle = "#1c1c1c";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    let fila = 0;
+    for (let y = -10; y > -46; y -= 10) {
+      ctx.moveTo(-45, y); ctx.lineTo(45, y);
+      for (let bx = -45 + (fila % 2) * 10; bx < 45; bx += 20) {
+        ctx.moveTo(bx, y); ctx.lineTo(bx, y + 10);
+      }
+      fila++;
+    }
+    ctx.stroke();
+
+    // ferros expostos no topo
+    ctx.strokeStyle = "#2a2625";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-6, -58);  ctx.lineTo(-9, -70);  ctx.lineTo(-3, -75);
+    ctx.moveTo(12, -56);  ctx.lineTo(15, -66);
+    ctx.moveTo(-38, -53); ctx.lineTo(-40, -62);
+    ctx.stroke();
+
+    // luz do pôr do sol
+    ctx.strokeStyle = rgba(paleta.luz, 0.22);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-45, -51.4); ctx.lineTo(-30, -53.4);
+    ctx.moveTo(-6, -57.4);  ctx.lineTo(12, -55.4);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}

@@ -1,4 +1,19 @@
+// =====================================================
+// JOGO: lógica (atualizar) e desenho (desenhar)
+// =====================================================
+
+// Chama uma função de outro arquivo só se ela existir (menu, casa...).
+// Assim o jogo abre mesmo que algum desses arquivos ainda não esteja carregado.
+function chamar(nome) {
+  if (typeof window[nome] === "function") return window[nome]();
+}
+function emMenu() {
+  return !!chamar("noMenu");
+}
+
 function atualizar(dt) {
+  if (emMenu()) return;
+
   if (estado === "morto") {
     contador -= dt;
     if (contador <= 0) reiniciar();
@@ -20,9 +35,7 @@ function atualizar(dt) {
   const esquerda = teclas["ArrowLeft"] || teclas["KeyA"];
   const direita  = teclas["ArrowRight"] || teclas["KeyD"];
   const pular    = teclas["Space"] || teclas["ArrowUp"] || teclas["KeyW"];
-
-  // --- movimento horizontal ---
-const agachar = teclas["ShiftLeft"] || teclas["ShiftRight"];
+  const agachar  = teclas["ShiftLeft"] || teclas["ShiftRight"];
 
   // --- agachar / levantar ---
   if (agachar && jogador.noChao && !jogador.agachado) {
@@ -91,7 +104,7 @@ const agachar = teclas["ShiftLeft"] || teclas["ShiftRight"];
   camera = Math.max(0, Math.min(jogador.x - LARGURA / 3, FIM_DO_MUNDO - LARGURA));
 
   atualizarMonstro(dt);
-    if (estado === "jogando" && olhoPegouJogador()) morrer();
+  if (estado === "jogando" && olhoPegouJogador()) morrer();
 }
 
 
@@ -109,7 +122,7 @@ function desenhar() {
   ctx.fillRect(0, 0, LARGURA, ALTURA);
 
   // Imagem de fundo opcional (só na floresta)
-  if (faseAtual.cenario !== "cidade" && fundo.complete && fundo.naturalWidth > 0) {
+  if (faseAtual.cenario === "floresta" && fundo.complete && fundo.naturalWidth > 0) {
     const escalaFundo = Math.max(ALTURA / fundo.height, (LARGURA * 1.3) / fundo.width);
     const larguraFundo = fundo.width * escalaFundo;
     const alturaFundo = fundo.height * escalaFundo;
@@ -121,9 +134,9 @@ function desenhar() {
     camadaPredios(0.15, 0.4, 170, 190);   // prédios lá longe
     desenharFumaca();
     camadaPredios(0.45, 0.9, 130, 130);   // prédios mais perto
-  } else {
-    camadaGalhos(0.3, 0.45, 100, 220, 0.6);    // árvores lá longe: bem claras
-    camadaGalhos(0.6, 0.85, 130, 200, 0.35);   // árvores mais perto
+  } else if (faseAtual.cenario === "floresta") {
+    camadaGalhos(0.3, 0.45, 100, 220);    // árvores lá longe
+    camadaGalhos(0.6, 0.85, 130, 200);    // árvores mais perto
 
     // névoa rente ao chão
     const nev = ctx.createLinearGradient(0, 200, 0, 400);
@@ -137,14 +150,23 @@ function desenhar() {
   ctx.save();
   ctx.translate(-Math.round(camera), 0);
 
-  ctx.fillStyle = "#050505";
-  for (const p of plataformas) ctx.fillRect(p.x, p.y, p.w, p.h);
+  if (faseAtual.cenario === "casa") chamar("desenharCasa");   // parede, janelas, telhado e ponte
 
+  // plataformas lisas (as com "estilo" e as "invisivel" se desenham sozinhas)
+  ctx.fillStyle = "#050505";
+  for (const p of plataformas) {
+    if (p.estilo) continue;
+    if (p.invisivel && p.h !== 100) continue;
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+  }
+
+  // perigos: cones na cidade, espinhos nas outras fases
   for (const e of espinhos) {
     if (faseAtual.cenario === "cidade") {
       desenharCones(e);
     } else {
-      for (let x = e.x; x < e.x + e.w; x += 20) {
+      ctx.fillStyle = "#050505";
+      for (let x = e.x; x < e.x + e.w; x += 20) {   // um triângulo a cada 20 de largura
         ctx.beginPath();
         ctx.moveTo(x, e.y + e.h);
         ctx.lineTo(x + 10, e.y);
@@ -154,14 +176,19 @@ function desenhar() {
     }
   }
 
+  if (faseAtual.cenario === "casa") chamar("desenharDetalhesCasa");   // detalhes dos degraus
+
+  desenharBlocos();                                  // blocos estilizados, antes do chão/grama
   if (faseAtual.cenario === "cidade") {
     desenharChao();
   } else {
-    desenharGrama();
+    desenharGrama();      // na casa, as plataformas com semGrama: true são puladas
   }
+
   desenharObjetos();
   desenharObjetosCidade();
-  desenharInstrucoes();
+  if (faseAtual.cenario === "casa") chamar("desenharDecoracaoCasa");   // abóboras, quadros, morcegos...
+  if (!emMenu()) desenharInstrucoes();
 
   // Luz que marca o fim da fase
   ctx.save();
@@ -177,12 +204,15 @@ function desenhar() {
   desenharFrenteCidade();
   desenharMonstro();
   ctx.restore();
-  
-    // ===== 3) POR CIMA DE TUDO (fixo na tela) =====
+
+  // ===== 3) POR CIMA DE TUDO (fixo na tela) =====
   if (faseAtual.cenario === "cidade") desenharCinzas();
 
   ctx.fillStyle = vinheta;
   ctx.fillRect(0, 0, LARGURA, ALTURA);
+
+  if (emMenu()) { chamar("desenharMenu"); return; }
+
   ctx.fillStyle = "rgba(255,255,255,0.75)";
   ctx.font = "16px Georgia, serif";
   ctx.textAlign = "left";

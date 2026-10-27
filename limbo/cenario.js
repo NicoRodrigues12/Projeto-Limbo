@@ -44,7 +44,8 @@ function desenharGrama() {
   ctx.lineWidth = 1.6;
 
   for (const p of plataformas) {
-    if (p.x + p.w < camera - 20 || p.x > camera + LARGURA + 20) continue;   // fora da tela
+    if (p.x + p.w < camera - 20 || p.x > camera + LARGURA + 20) continue;
+    if(p.semGrama) continue   // fora da tela
     const ini = Math.max(p.x + 2, Math.floor(camera / 4) * 4 - 8);
     const fim = Math.min(p.x + p.w - 2, camera + LARGURA + 8);
 
@@ -73,7 +74,7 @@ function desenharGrama() {
 // y padrão = 380 (o chão). Correntes usam y: 0 (penduradas no teto).
 
 // número "aleatório" que sempre dá o mesmo resultado para a mesma entrada
-// (assim as árvores não ficam tremendo a cada quadro)
+// (assim as árvores não ficam tremendo a cada quadro de segundo)-
 function pseudo(n) {
   const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
   return s - Math.floor(s);

@@ -168,8 +168,11 @@ function desenharAbrigos() {
 
   for (const o of objetos) {
     if (!TAMANHO_ABRIGO[o.tipo]) continue;
-    if (o.x < camera - 120 || o.x > camera + LARGURA + 120) continue;   // fora da tela
-
+    if (o.x < camera - 120 || o.x > camera + LARGURA + 120) continue;   
+        if (faseAtual.cenario === "cidade" && (o.tipo === "rochedo" || o.tipo === "muro")) {
+      desenharAbrigoCidade(o);
+      continue;
+    }
     ctx.save();
     ctx.translate(o.x, 380);          // (0,0) = base do objeto, no chão
     ctx.fillStyle = "#030303";
@@ -269,7 +272,7 @@ function desenharInstrucoes() {
   const linhas = [
     "Setas ou A / D  -  andar",
     "Espaço, W ou seta para cima  -  pular",
-    "S ou seta para baixo  -  agachar",
+    "Shift  -  agachar",
     "R  -  reiniciar",
     "1 a 5  -  trocar a cor do cenário",
   ];
