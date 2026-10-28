@@ -18,8 +18,17 @@ const PALETAS = [
   { ceuCima: "#0c1d3a", ceuBaixo: "#3a6fb0", arvore: "#050a19", luz: "#c8e4ff" },  // 5 azul
   { ceuCima: "#2b2a2e", ceuBaixo: "#8a8478", arvore: "#121114", luz: "#f2e6cf" },  // 6 cinzas
   { ceuCima: "#1a1618", ceuBaixo: "#b5683f", arvore: "#0d0a0b", luz: "#ffd2a8" },  // 7 pôr do sol em ruínas
+  { ceuCima: "#0f0818", ceuBaixo: "#6a3318", arvore: "#07040a", luz: "#ffb347" },  // 8 halloween
+  { ceuCima: "#0d0712", ceuBaixo: "#3a1c3e", arvore: "#07040a", luz: "#ffb86b" },  // 8 casa mal-assombrada
 ];
 let paleta = PALETAS[0];
+// Beirada: tábua fina e atravessável (a fase 3 é feita delas).
+// Dá para pular por baixo e pousar em cima. O pulo sobe uns 120, então
+// mantenha 80 de diferença de altura entre uma beirada e a próxima.
+function beirada(x, y, w) {
+  return { x, y, w, h: 14, tipo: "assoalho" };
+}
+
 
 const FASES = [
   // ---------------------------------------------------
@@ -189,100 +198,170 @@ const FASES = [
     ],
   },
 
+    // ---------------------------------------------------
+  // FASE 3: casa mal-assombrada (uma torre para ESCALAR)
+  //   Só se sobe: do térreo (y = 380) até o sótão (y = -1540).
+  //   Cada beirada fica 80 acima da anterior, com vãos de 40 a 60 entre elas.
+  //   Os armários (id "armario1"...) ainda não fazem nada: as funções deles vêm depois.
   // ---------------------------------------------------
-  // FASE 3: casa mal-assombrada (Halloween)
-  //   Fora: terreno + ponte. A casa vai de x = 800 a x = 1600 e ocupa a tela inteira.
-  //   Dentro: térreo, 1º andar, 2º andar e sótão. Sobe-se sempre para a direita.
+    // ---------------------------------------------------
+  // FASE 3: casa mal-assombrada (uma torre para ESCALAR)
+  //   Só se sobe: do térreo (y = 380) até o sótão (y = -1540).
+  //   Cada beirada fica 80 acima da anterior, com vãos de 40 a 60 entre elas.
+  //   Os armários (id "armario1"...) ainda não fazem nada: as funções deles vêm depois.
   // ---------------------------------------------------
   {
     nome: "Casa Mal-Assombrada",
     cenario: "casa",
     paleta: 7,
-    fim: 1600,
+    fim: 800,            // a fase tem a largura da tela: a câmera não anda para os lados
+    vertical: true,
+    topo: -1760,         // até onde a câmera sobe
+    monstro: false,      // sem o olho nesta fase
+    rush: true,          // o monstro novo    // sem o olho nesta fase
 
     plataformas: [
-      // --- fora da casa ---
-      { x: 0,   y: 380, w: 320, h: 100 },                          // terreno de entrada
-      { x: 320, y: 380, w: 200, h: 16, semGrama: true },           // ponte, parte 1
-      { x: 580, y: 380, w: 200, h: 16, semGrama: true },           // ponte, parte 2 (tábua quebrada de 60 no meio)
-
       // --- térreo ---
-      { x: 780, y: 380, w: 820, h: 100, semGrama: true },          // chão da casa
-      { x: 860, y: 348, w: 50,  h: 32,  semGrama: true, tipo: "caixote" },   // escada 1 (quebrada)
-      { x: 910, y: 316, w: 50,  h: 64,  semGrama: true, tipo: "bau" },
+      { x: 0,   y: 380, w: 800, h: 100, tipo: "assoalho" },
+      { x: 180, y: 344, w: 60,  h: 36,  tipo: "comoda" },      // móvel sólido: treino de pulo
+      { x: 560, y: 340, w: 50,  h: 40,  tipo: "bau" },         // baú sólido: degrau até a beirada 1
 
       // --- 1º andar ---
-      { x: 1010, y: 285, w: 590, h: 20, semGrama: true },
-      { x: 1080, y: 253, w: 50,  h: 32, semGrama: true, tipo: "comoda" },   // escada 2
-      { x: 1130, y: 221, w: 50,  h: 64, semGrama: true, tipo: "barril" },
+      beirada(360,  300, 180),    //  1
+      beirada(120,  220, 180),    //  2
+      beirada(360,  140, 180),    //  3  (espinhos no meio)
+      beirada(600,   60, 180),    //  4
+      beirada(360,  -20, 180),    //  5
+      beirada(40,  -100, 280),    //  6  PATAMAR 1
 
       // --- 2º andar ---
-      { x: 1240, y: 190, w: 360, h: 20, semGrama: true },
-      { x: 1300, y: 158, w: 50,  h: 32, semGrama: true, tipo: "caixote" },  // escada 3
-      { x: 1350, y: 126, w: 50,  h: 64, semGrama: true, tipo: "bau" },
+      beirada(380, -180, 180),    //  7  (espinhos)
+      beirada(620, -260, 170),    //  8
+      beirada(380, -340, 180),    //  9
+      beirada(140, -420, 180),    // 10
+      beirada(380, -500, 180),    // 11  (espinhos)
+      beirada(620, -580, 180),    // 12  PATAMAR 2
 
-      // --- sótão (o fim da fase) ---
-      { x: 1440, y: 95,  w: 160, h: 20, semGrama: true },
+      // --- 3º andar ---
+      beirada(380, -660, 180),    // 13  (espinhos)
+      beirada(140, -740, 180),    // 14
+      beirada(360, -820, 160),    // 15
+      beirada(420, -900, 180),    // 16  (espinhos)
+      beirada(620, -980, 170),    // 17
+      beirada(160, -1060, 400),   // 18  PATAMAR 3
 
-      // parede da direita
-      { x: 1600, y: 0,   w: 40,  h: 380, semGrama: true },
+      // --- sótão ---
+      beirada(600, -1140, 190),   // 19
+      beirada(360, -1220, 180),   // 20  (espinhos)
+      beirada(120, -1300, 180),   // 21
+      beirada(360, -1380, 180),   // 22  (espinhos)
+      beirada(600, -1460, 180),   // 23
+      beirada(300, -1540, 240),   // 24  o fim da fase
+
+      // parede da direita (a da esquerda é o próprio limite da tela)
+      { x: 800, y: -1800, w: 60, h: 2300 },
     ],
 
-    espinhos: [
-      { x: 964, y: 360, w: 40, h: 20 },    // embaixo do buraco da escada 1
+    espinhos: [   // cada um fica em cima da beirada: y = topo da beirada - 20
+      { x: 440, y: 120,   w: 40, h: 20 },   //  3
+      { x: 450, y: -200,  w: 40, h: 20 },   //  7
+      { x: 450, y: -520,  w: 40, h: 20 },   // 11
+      { x: 450, y: -680,  w: 40, h: 20 },   // 13
+      { x: 480, y: -920,  w: 40, h: 20 },   // 16
+      { x: 420, y: -1240, w: 40, h: 20 },   // 20
+      { x: 450, y: -1400, w: 40, h: 20 },   // 22
+     { x: 400, y: 154, w: 40, h: 20, invertido: true },   // embaixo da beirada 3
     ],
 
-    luz: { x: 1560, y: 5, w: 10, h: 90 },  // lá em cima, no sótão
+    luz: { x: 470, y: -1630, w: 10, h: 90 },   // em cima da beirada 24
 
+    // y padrão = 380 (o chão). Nos outros lugares, y = topo da beirada onde o objeto fica.
+    // quadro: y é o centro do quadro. lustre: y é onde a corrente prende.
     objetos: [
-      // fora da casa
-      { tipo: "lapide",   x: 80 },
-      { tipo: "toco",     x: 200 },
-      { tipo: "abobora",  x: 280 },
-      { tipo: "lanterna", x: 450 },
-      { tipo: "morcego",  x: 700, y: 70 },
-
       // térreo
-      { tipo: "teia",       x: 806, y: 0 },
-      { tipo: "lustre",     x: 1050, y: 0, comp: 95 },
-      { tipo: "morcego",    x: 930, y: 100 },
-      { tipo: "abobora",    x: 1090 },
-      { tipo: "quadro",     x: 1250, y: 345 },
-      { tipo: "candelabro", x: 1400 },
-      { tipo: "abobora",    x: 1550 },
+      { tipo: "abobora",    x: 110 },
+      { tipo: "candelabro", x: 300 },
+      { tipo: "quadro",     x: 480, y: 250 },
+      { tipo: "armario",    x: 690, id: "armario1", w: 52, h: 62 },
 
       // 1º andar
-      { tipo: "abobora", x: 1040, y: 285 },
-      { tipo: "quadro",  x: 1330, y: 248 },
-      { tipo: "armario", x: 1500, y: 285, id: "armario", w: 52, h: 62 },   // o armário (função especial vem depois)
+      { tipo: "abobora",    x: 430, y: 300 },
+      { tipo: "candelabro", x: 150, y: 220 },
+      { tipo: "morcego",    x: 700, y: 140 },
+      { tipo: "quadro",     x: 200, y: 120 },
+      { tipo: "abobora",    x: 740, y: 60 },
+      { tipo: "candelabro", x: 520, y: -20 },
+      { tipo: "armario",    x: 90,  y: -100, id: "armario2", w: 52, h: 62 },
+      { tipo: "candelabro", x: 250, y: -100 },
 
       // 2º andar
-      { tipo: "candelabro", x: 1265, y: 190 },
-      { tipo: "quadro",     x: 1490, y: 155 },
-      { tipo: "abobora",    x: 1560, y: 190 },
+      { tipo: "abobora",    x: 530, y: -180 },
+      { tipo: "candelabro", x: 760, y: -260 },
+      { tipo: "quadro",     x: 200, y: -330 },
+      { tipo: "morcego",    x: 450, y: -400 },
+      { tipo: "lustre",     x: 230, y: -406, comp: 40 },
+      { tipo: "candelabro", x: 410, y: -500 },
+      { tipo: "abobora",    x: 660, y: -580 },
+      { tipo: "armario",    x: 760, y: -580, id: "armario3", w: 52, h: 62 },
+
+      // 3º andar
+      { tipo: "candelabro", x: 170, y: -740 },
+      { tipo: "quadro",     x: 620, y: -790 },
+      { tipo: "morcego",    x: 330, y: -700 },
+      { tipo: "abobora",    x: 560, y: -900 },
+      { tipo: "candelabro", x: 740, y: -980 },
+      { tipo: "armario",    x: 210, y: -1060, id: "armario4", w: 52, h: 62 },
+      { tipo: "candelabro", x: 350, y: -1060 },
+      { tipo: "armario",    x: 500, y: -1060, id: "armario5", w: 52, h: 62 },
 
       // sótão
-      { tipo: "morcego",    x: 1300, y: 30 },
-      { tipo: "abobora",    x: 1470, y: 95 },
-      { tipo: "candelabro", x: 1525, y: 95 },
-      { tipo: "teia",       x: 1598, y: 0, espelho: true },
-    ],
-  },
+      { tipo: "abobora",    x: 750, y: -1140 },
+      { tipo: "quadro",     x: 480, y: -1180 },
+      { tipo: "morcego",    x: 200, y: -1250 },
+      { tipo: "candelabro", x: 150, y: -1300 },
+      { tipo: "abobora",    x: 740, y: -1460 },
+      { tipo: "morcego",    x: 650, y: -1530 },
+      { tipo: "armario",    x: 340, y: -1540, id: "armario6", w: 52, h: 62 },
+      { tipo: "candelabro", x: 520, y: -1540 },
+      { tipo: "lustre",     x: 420, y: -1700, comp: 60 },
+      { tipo: "teia",       x: 0,   y: -1700 },
+      { tipo: "teia",       x: 800, y: -1700, espelho: true },
 
 
-];
+
+
+    // ===== DECORAÇÃO EXTRA ... =====
+    { tipo: "lampada", x: 210, y: 240, comp: 50, cor: "laranja" },
+    // ... todo o resto da decoração ...
+    { tipo: "teia", x: 0, y: -1280, aranha: true },
+
+  ],     // fecha o array objetos
+},       // fecha a fase
+];       // fecha o F
 
 // O que a fase atual está usando (preenchido por carregarFase)
 let faseAtual;
 let numeroFase = 0;
 let FIM_DO_MUNDO, plataformas, espinhos, luz, objetos;
 
+// Os triângulos embaixo das pontas de cada beirada (a hitbox deles é criada aqui)
+function espinhosDosSuportes(f) {
+  const lista = [];
+  if (f.cenario !== "casa") return lista;
+  for (const p of f.plataformas) {
+    if (p.tipo !== "assoalho" || p.h !== 14) continue;   // só as beiradas
+    lista.push({ x: p.x + 8,         y: p.y + 14, w: 20, h: 12, invertido: true, suporte: true });
+    lista.push({ x: p.x + p.w - 28,  y: p.y + 14, w: 20, h: 12, invertido: true, suporte: true });
+  }
+  return lista;
+}
+
 function carregarFase(n) {
   numeroFase = n;
   faseAtual = FASES[n];
   FIM_DO_MUNDO = faseAtual.fim;
   plataformas = faseAtual.plataformas;
-  espinhos = faseAtual.espinhos;
+  espinhos = faseAtual.espinhos.concat(espinhosDosSuportes(faseAtual));
   luz = faseAtual.luz;
   objetos = faseAtual.objetos;
   paleta = PALETAS[faseAtual.paleta];

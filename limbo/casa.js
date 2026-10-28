@@ -1,9 +1,18 @@
-// casa.js - Fase 3 (casa mal-assombrada): desenho da casa, dos detalhes dos degraus e da decoração.
-// Os DADOS da fase (plataformas, espinhos, luz, objetos) ficam em fase.js, na terceira entrada de FASES.
-// A casa começa em x = 800 e vai até x = 1600: quando a câmera chega no fim, ela ocupa a tela inteira.
-const CASA_X = 800;
+// casa.js - Fase 3 (casa mal-assombrada): uma torre para ESCALAR, só para cima.
+// Os DADOS da fase (beiradas, espinhos, luz, objetos) ficam em fase.js, na terceira entrada de FASES.
+// Aqui ficam só os desenhos: paredes e janelas, detalhes das tábuas e a decoração (com os armários).
 
-// ---------- CENÁRIO DA CASA (desenhado ANTES das plataformas) ----------
+const CASA_LARGURA = 800;
+const CASA_TETO = -1700;                                   // daqui para cima é o telhado
+const CASA_ANDARES = [380, -100, -580, -1060, CASA_TETO];  // chão de cada andar, de baixo para cima (o último é o teto)
+const CASA_PAPEIS = [
+  { cima: "#120c18", baixo: "#271b2e" },   // térreo
+  { cima: "#0f101c", baixo: "#1d2133" },   // 1º andar (azulado)
+  { cima: "#170d12", baixo: "#2e1a22" },   // 2º andar (vinho)
+  { cima: "#0c0a10", baixo: "#1c1722" },   // sótão (quase preto)
+];
+
+// ---------- CENÁRIO (desenhado ANTES das plataformas) ----------
 function janela(x, y) {   // x, y = canto de cima à esquerda; 44 x 70
   ctx.save();
   ctx.shadowColor = "#ff9a3c";
@@ -26,53 +35,78 @@ function janela(x, y) {   // x, y = canto de cima à esquerda; 44 x 70
 }
 
 function desenharCasa() {
-  const X = CASA_X, W = 800;
+  const vTopo = cameraY - 4, vBase = cameraY + ALTURA + 4;   // faixa do mundo que aparece na tela
 
-  // parede de dentro, com papel de parede listrado
-  const g = ctx.createLinearGradient(0, 0, 0, 380);
-  g.addColorStop(0, "#120c18");
-  g.addColorStop(1, "#261b2d");
-  ctx.fillStyle = g;
-  ctx.fillRect(X, 0, W, 380);
-  ctx.fillStyle = "rgba(255,255,255,0.03)";
-  for (let x = X + 20; x < X + W; x += 40) ctx.fillRect(x, 0, 14, 380);
+  // papel de parede de cada andar (a cor muda de andar para andar)
+  for (let i = 0; i < CASA_PAPEIS.length; i++) {
+    const baixo = CASA_ANDARES[i], cima = CASA_ANDARES[i + 1];
+    const y0 = Math.max(cima, vTopo), y1 = Math.min(baixo, vBase);
+    if (y1 <= y0) continue;
 
-  for (const [wx, wy] of [[840, 95], [1000, 95], [1180, 40], [1300, 40]]) janela(wx, wy);
+    const g = ctx.createLinearGradient(0, cima, 0, baixo);
+    g.addColorStop(0, CASA_PAPEIS[i].cima);
+    g.addColorStop(1, CASA_PAPEIS[i].baixo);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y0, CASA_LARGURA, y1 - y0);
 
-  // telhado e vigas
-  ctx.fillStyle = "#07040a";
-  ctx.beginPath();
-  ctx.moveTo(X - 20, 40); ctx.lineTo(X + W / 2, -30); ctx.lineTo(X + W + 20, 40);
-  ctx.lineTo(X + W + 20, -40); ctx.lineTo(X - 20, -40);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#07040a";
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  for (let k = 1; k <= 5; k++) { ctx.moveTo(X + W / 2, -30); ctx.lineTo(X + k * 133, 55 - Math.abs(3 - k) * 4); }
-  ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.03)";                 // listras
+    for (let x = 20; x < CASA_LARGURA; x += 40) ctx.fillRect(x, y0, 14, y1 - y0);
+  }
 
-  // parede da esquerda (a entrada fica aberta no térreo)
-  ctx.fillStyle = "#050505";
-  ctx.fillRect(X - 14, 0, 14, 300);
+  // cornija na divisa de cada andar
+  for (const y of CASA_ANDARES.slice(1, -1)) {
+    if (y < vTopo - 12 || y > vBase + 12) continue;
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(0, y - 6, CASA_LARGURA, 12);
+    ctx.fillStyle = "rgba(255,190,120,0.10)";
+    ctx.fillRect(0, y - 6, CASA_LARGURA, 2);
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    for (let x = 6; x < CASA_LARGURA; x += 24) ctx.fillRect(x, y + 6, 10, 5);
+  }
 
-  // ponte: postes e cordas
-  ctx.strokeStyle = "#050505";
-  ctx.lineWidth = 3;
-  for (const x of [330, 425, 515, 585, 680, 770]) { ctx.beginPath(); ctx.moveTo(x, 380); ctx.lineTo(x, 338); ctx.stroke(); }
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(330, 338); ctx.quadraticCurveTo(422, 360, 515, 338);
-  ctx.moveTo(585, 338); ctx.quadraticCurveTo(677, 360, 770, 338);
-  ctx.stroke();
+  // rodapé do térreo
+  if (vBase > 362 && vTopo < 380) {
+    ctx.fillStyle = "#08050b";
+    ctx.fillRect(0, 362, CASA_LARGURA, 18);
+  }
+
+  // janelas, uma de cada lado, de baixo para cima
+  for (let i = 0; i < 8; i++) {
+    const wy = 270 - i * 240;
+    if (wy + 80 < vTopo || wy - 20 > vBase) continue;
+    janela(i % 2 ? 676 : 80, wy);
+  }
+
+  // colunas nas laterais
+  ctx.fillStyle = "#050308";
+  ctx.fillRect(0, vTopo, 10, vBase - vTopo);
+  ctx.fillRect(CASA_LARGURA - 10, vTopo, 10, vBase - vTopo);
+
+  // telhado
+  if (vTopo < CASA_TETO) {
+    ctx.fillStyle = "#07040a";
+    ctx.fillRect(0, vTopo, CASA_LARGURA, CASA_TETO - vTopo);
+    ctx.fillStyle = "#120c18";
+    ctx.fillRect(0, CASA_TETO - 10, CASA_LARGURA, 10);        // viga do teto
+    ctx.strokeStyle = "#0d0813";                               // escoras nos cantos
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(0, CASA_TETO + 90);                ctx.lineTo(90, CASA_TETO);
+    ctx.moveTo(CASA_LARGURA, CASA_TETO + 90);     ctx.lineTo(CASA_LARGURA - 90, CASA_TETO);
+    ctx.stroke();
+  }
 }
 
-// ---------- DETALHES DOS DEGRAUS (desenhados DEPOIS das plataformas) ----------
+// ---------- DETALHES DAS PLATAFORMAS (desenhados DEPOIS delas) ----------
 function desenharDetalhesCasa() {
-  ctx.strokeStyle = "#2f2536";
-  ctx.lineWidth = 1.5;
   for (const p of plataformas) {
     if (!p.tipo) continue;
+    if (p.y > cameraY + ALTURA + 40 || p.y + p.h < cameraY - 40) continue;   // fora da tela
+
+    if (p.tipo === "assoalho") { detalheAssoalho(p); continue; }
+
+    ctx.strokeStyle = "#2f2536";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     if (p.tipo === "caixote") { ctx.rect(p.x + 3, p.y + 3, p.w - 6, p.h - 6); ctx.moveTo(p.x + 3, p.y + 3); ctx.lineTo(p.x + p.w - 3, p.y + p.h - 3); }
     if (p.tipo === "bau")     { ctx.moveTo(p.x, p.y + 12); ctx.lineTo(p.x + p.w, p.y + 12); ctx.rect(p.x + p.w / 2 - 4, p.y + 8, 8, 10); }
@@ -82,7 +116,42 @@ function desenharDetalhesCasa() {
   }
 }
 
-// ---------- DECORAÇÃO E ARMÁRIO ----------
+// Tábua de assoalho: luz quente em cima, emendas, pregos e suportes embaixo
+function detalheAssoalho(p) {
+  const prof = Math.min(p.h, 14);
+
+  ctx.strokeStyle = "rgba(255,170,90,0.35)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y + 0.6);
+  ctx.lineTo(p.x + p.w, p.y + 0.6);
+  ctx.stroke();
+
+  ctx.strokeStyle = "#251b2b";
+  ctx.beginPath();
+  for (let x = p.x + 34; x < p.x + p.w - 6; x += 34) { ctx.moveTo(x, p.y + 1); ctx.lineTo(x, p.y + prof); }
+  ctx.stroke();
+
+  ctx.fillStyle = "#3a2f40";
+  for (let x = p.x + 8; x < p.x + p.w - 4; x += 34) {
+    ctx.beginPath();
+    ctx.arc(x, p.y + 4, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  if (p.h > 30) return;                       // o piso do térreo é grosso: sem suportes
+  ctx.fillStyle = "#050505";
+  for (const sx of [p.x + 18, p.x + p.w - 18]) {
+    ctx.beginPath();
+    ctx.moveTo(sx - 9, p.y + p.h);
+    ctx.lineTo(sx + 9, p.y + p.h);
+    ctx.lineTo(sx, p.y + p.h + 13);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+// ---------- DECORAÇÃO E ARMÁRIOS ----------
 const TIPOS_DECOR = ["abobora", "candelabro", "teia", "quadro", "lustre", "morcego", "armario"];
 
 function desenharDecoracaoCasa() {
@@ -90,10 +159,12 @@ function desenharDecoracaoCasa() {
 
   for (const o of objetos) {
     if (!TIPOS_DECOR.includes(o.tipo)) continue;
-    if (o.x < camera - 120 || o.x > camera + LARGURA + 120) continue;   // fora da tela
+    const oy = o.y === undefined ? 380 : o.y;
+    if (o.x < camera - 120 || o.x > camera + LARGURA + 120) continue;     // fora da tela (lados)
+    if (oy < cameraY - 200 || oy > cameraY + ALTURA + 200) continue;      // fora da tela (cima/baixo)
 
     ctx.save();
-    ctx.translate(o.x, o.y === undefined ? 380 : o.y);   // (0,0) = base do objeto
+    ctx.translate(o.x, oy);   // (0,0) = base do objeto
     ctx.fillStyle = "#030303";
     ctx.strokeStyle = "#030303";
     ctx.lineCap = "round";
@@ -140,7 +211,7 @@ function desenharDecoracaoCasa() {
       ctx.fillRect(-7, -6, 3, 5); ctx.fillRect(4, -6, 3, 5);
 
     } else if (o.tipo === "lustre") {
-      ctx.rotate(Math.sin(t * 0.8) * 0.03);               // balança pendurado no teto
+      ctx.rotate(Math.sin(t * 0.8) * 0.03);               // balança pendurado
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, o.comp); ctx.stroke();
       ctx.lineWidth = 4;
@@ -169,12 +240,35 @@ function desenharDecoracaoCasa() {
       ctx.fillRect(-26, -62, 52, 60);                      // corpo
       ctx.fillRect(-30, -68, 60, 7);                       // coroa
       ctx.fillRect(-24, -2, 6, 3); ctx.fillRect(18, -2, 6, 3);   // pés
+      ctx.fillStyle = "#1c1412"; ctx.fillRect(-30, -68, 60, 1.5);   // luz na borda de cima
       ctx.strokeStyle = "#2b1e1a"; ctx.lineWidth = 1.5;
       ctx.strokeRect(-22, -56, 19, 50); ctx.strokeRect(3, -56, 19, 50);   // portas
       ctx.fillStyle = "#5a4a34";
       ctx.beginPath(); ctx.arc(-6, -32, 2, 0, Math.PI * 2); ctx.arc(7, -32, 2, 0, Math.PI * 2); ctx.fill();
+    }      // tem alguém escondido aqui: a fresta escurece e um olho brilha lá dentro
+    if (jogador.escondido && armarioPerto() === o) {
+      ctx.fillStyle = "#000";
+      ctx.fillRect(-1.5, -56, 3, 50);
+      ctx.shadowColor = "#fff";
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.ellipse(0, -38, 1.6, 2.6, 0, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     ctx.restore();
   }
+}
+
+// Para as funções dos armários (que vêm depois): devolve o armário ao alcance do jogador, ou null.
+// "Ao alcance" = pés na mesma altura da base do armário e a menos de 40 de distância na horizontal.
+function armarioPerto() {
+  const cx = jogador.x + jogador.w / 2;
+  const pes = jogador.y + jogador.h;
+  return objetos.find((o) =>
+    o.tipo === "armario" &&
+    Math.abs(o.x - cx) < 40 &&
+    Math.abs((o.y === undefined ? 380 : o.y) - pes) < 6
+  ) || null;
 }

@@ -10,6 +10,8 @@ window.addEventListener("keydown", (e) => {
   if (e.code.startsWith("Digit") && !noMenu() && PALETAS[Number(e.code[5]) - 1]) {
     paleta = PALETAS[Number(e.code[5]) - 1];
   }
+
+  if (e.code === "KeyH") depurar = !depurar;
 });
 window.addEventListener("keyup", (e) => { teclas[e.code] = false; });
 window.addEventListener("blur", () => { for (const t in teclas) teclas[t] = false; });

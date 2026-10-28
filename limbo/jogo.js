@@ -11,8 +11,19 @@ function emMenu() {
   return !!chamar("noMenu");
 }
 
+// Hitbox de um espinho: um pouco menor que o desenho, cortando a ponta.
+// Em pé a ponta fica em cima; invertido, a ponta fica embaixo.
+function caixaEspinho(e) {
+  if (e.suporte) return { x: e.x + 3, y: e.y, w: e.w - 6, h: e.h - 3 };
+  if (e.invertido) return { x: e.x + 4, y: e.y, w: e.w - 8, h: e.h - 6 };
+  return { x: e.x + 4, y: e.y + 6, w: e.w - 8, h: e.h - 6 };
+}
+
 function atualizar(dt) {
   if (emMenu()) return;
+
+  // jumpscare do Rush: o jogo congela e só o susto anda
+  if (estado === "susto") { atualizarRush(dt); return; }
 
   if (estado === "morto") {
     contador -= dt;
@@ -32,21 +43,27 @@ function atualizar(dt) {
     return;
   }
 
-  const esquerda = teclas["ArrowLeft"] || teclas["KeyA"];
-  const direita  = teclas["ArrowRight"] || teclas["KeyD"];
-  const pular    = teclas["Space"] || teclas["ArrowUp"] || teclas["KeyW"];
-  const agachar  = teclas["ShiftLeft"] || teclas["ShiftRight"];
+  const agachar = teclas["ShiftLeft"] || teclas["ShiftRight"];
+
+  // --- esconder no armário: segure Shift na frente dele (só nas fases com rush) ---
+  const armario = faseAtual.rush ? armarioPerto() : null;
+  jogador.escondido = !!(armario && agachar && jogador.noChao);
+  const livre = !jogador.escondido;      // escondido: não anda, não pula e não agacha
+
+  const esquerda = livre && (teclas["ArrowLeft"] || teclas["KeyA"]);
+  const direita  = livre && (teclas["ArrowRight"] || teclas["KeyD"]);
+  const pular    = livre && (teclas["Space"] || teclas["ArrowUp"] || teclas["KeyW"]);
 
   // --- agachar / levantar ---
-  if (agachar && jogador.noChao && !jogador.agachado) {
+  if (agachar && livre && jogador.noChao && !jogador.agachado) {
     jogador.agachado = true;
     jogador.y += ALTURA_EM_PE - ALTURA_AGACHADO;   // desce, para os pés continuarem no chão
     jogador.h = ALTURA_AGACHADO;
   }
   if (!agachar && jogador.agachado) {
-    // só levanta se não houver nada em cima da cabeça
+    // só levanta se não houver nada em cima da cabeça (beiradas atravessáveis não contam)
     const emPe = { x: jogador.x, y: jogador.y + jogador.h - ALTURA_EM_PE, w: jogador.w, h: ALTURA_EM_PE };
-    if (!plataformas.some((p) => colide(emPe, p))) {
+    if (!plataformas.some((p) => !p.passavel && colide(emPe, p))) {
       jogador.agachado = false;
       jogador.y = emPe.y;
       jogador.h = ALTURA_EM_PE;
@@ -66,6 +83,7 @@ function atualizar(dt) {
   jogador.x += jogador.vx * dt;
   if (jogador.x < 0) jogador.x = 0;
   for (const p of plataformas) {          // bateu de lado numa parede?
+    if (p.passavel) continue;             // beirada: dá para atravessar pelo lado
     if (colide(jogador, p)) {
       if (jogador.vx > 0) jogador.x = p.x - jogador.w;
       else if (jogador.vx < 0) jogador.x = p.x + p.w;
@@ -73,10 +91,22 @@ function atualizar(dt) {
   }
 
   // --- movimento vertical (gravidade) ---
+  const baseAntes = jogador.y + jogador.h;      // onde estavam os pés antes de mover
   jogador.vy += GRAVIDADE * dt;
   jogador.y += jogador.vy * dt;
   jogador.noChao = false;
   for (const p of plataformas) {
+    if (p.passavel) {
+      // beirada: só segura quem está caindo e veio de cima. De baixo e dos lados, atravessa
+      const base = jogador.y + jogador.h;
+      if (jogador.vy > 0 && baseAntes <= p.y + 1 && base >= p.y &&
+          jogador.x < p.x + p.w && jogador.x + jogador.w > p.x) {
+        jogador.y = p.y - jogador.h;
+        jogador.vy = 0;
+        jogador.noChao = true;
+      }
+      continue;
+    }
     if (colide(jogador, p)) {
       if (jogador.vy > 0) {               // caindo: pousou em cima
         jogador.y = p.y - jogador.h;
@@ -94,7 +124,7 @@ function atualizar(dt) {
     const caixa = { x: e.x + 4, y: e.y + 6, w: e.w - 8, h: e.h - 6 };
     if (colide(jogador, caixa)) morrer();
   }
-  if (jogador.y > ALTURA + 80) morrer();   // caiu no buraco
+  if (jogador.y > (faseAtual.limiteQueda || ALTURA + 80)) morrer();   // caiu no buraco
 
   // --- chegou na luz? ---
   if (colide(jogador, luz)) estado = "venceu";
@@ -103,8 +133,23 @@ function atualizar(dt) {
   if (jogador.vx !== 0) jogador.anim += dt;
   camera = Math.max(0, Math.min(jogador.x - LARGURA / 3, FIM_DO_MUNDO - LARGURA));
 
-  atualizarMonstro(dt);
-  if (estado === "jogando" && olhoPegouJogador()) morrer();
+  // câmera vertical: segue o jogador suavemente, só nas fases com "vertical: true"
+  if (faseAtual.vertical) {
+    const alvo = Math.max(faseAtual.topo, Math.min(faseAtual.base || 0, jogador.y + jogador.h / 2 - (faseAtual.ancora || ALTURA * 0.55)));
+    cameraY += (alvo - cameraY) * Math.min(1, (faseAtual.camVel || 0.15) * dt);
+  } else {
+    cameraY = 0;
+  }
+
+  // o olho só existe nas fases que não têm "monstro: false"
+  if (faseAtual.monstro !== false) {
+    atualizarMonstro(dt);
+    if (estado === "jogando" && olhoPegouJogador()) morrer();
+  }
+
+  // o Rush (fases com "rush: true"): luzes piscam, escurece e ele passa correndo
+  if (faseAtual.rush && typeof atualizarRush === "function") atualizarRush(dt);
+  if (typeof atualizarFalsos === "function") atualizarFalsos(dt);   // chão falso
 }
 
 
@@ -115,10 +160,14 @@ vinheta.addColorStop(1, "rgba(0,0,0,0.65)");
 
 function desenhar() {
   // ===== 1) FUNDO (tudo aqui fica ATRÁS de todo o resto) =====
-  const ceu = ctx.createLinearGradient(0, 0, 0, ALTURA);
-  ceu.addColorStop(0, paleta.ceuCima);
-  ceu.addColorStop(1, paleta.ceuBaixo);
-  ctx.fillStyle = ceu;
+  if (faseAtual.cenario === "casa") {
+    ctx.fillStyle = "#050308";           // dentro da casa não tem céu (assim o tremor não mostra faixa)
+  } else {
+    const ceu = ctx.createLinearGradient(0, 0, 0, ALTURA);
+    ceu.addColorStop(0, paleta.ceuCima);
+    ceu.addColorStop(1, paleta.ceuBaixo);
+    ctx.fillStyle = ceu;
+  }
   ctx.fillRect(0, 0, LARGURA, ALTURA);
 
   // Imagem de fundo opcional (só na floresta)
@@ -148,9 +197,11 @@ function desenhar() {
 
   // ===== 2) MUNDO (acompanha a câmera, por cima do fundo) =====
   ctx.save();
-  ctx.translate(-Math.round(camera), 0);
+  const tr = chamar("tremorRush") || { x: 0, y: 0 };    // tremor da tela (só no Rush)
+  ctx.translate(-Math.round(camera) + tr.x, -Math.round(cameraY) + tr.y);
 
-  if (faseAtual.cenario === "casa") chamar("desenharCasa");   // parede, janelas, telhado e ponte
+  if (faseAtual.cenario === "casa") chamar("desenharCasa");   // paredes, janelas e telhado
+  if (faseAtual.caverna) chamar("desenharCaverna");   // o vazio do poço e do túnel
 
   // plataformas lisas (as com "estilo" e as "invisivel" se desenham sozinhas)
   ctx.fillStyle = "#050505";
@@ -158,36 +209,44 @@ function desenhar() {
     if (p.estilo) continue;
     if (p.invisivel && p.h !== 100) continue;
     ctx.fillRect(p.x, p.y, p.w, p.h);
-  }
+  }  
+  chamar("desenharEntulho");
 
   // perigos: cones na cidade, espinhos nas outras fases
-  for (const e of espinhos) {
+   for (const e of espinhos) {
+    if (e.suporte) continue;                        // os triângulos das beiradas já vêm do casa.js
     if (faseAtual.cenario === "cidade") {
       desenharCones(e);
     } else {
       ctx.fillStyle = "#050505";
       for (let x = e.x; x < e.x + e.w; x += 20) {   // um triângulo a cada 20 de largura
         ctx.beginPath();
-        ctx.moveTo(x, e.y + e.h);
-        ctx.lineTo(x + 10, e.y);
-        ctx.lineTo(x + 20, e.y + e.h);
+        if (e.invertido) {                          // ponta para baixo
+          ctx.moveTo(x, e.y);
+          ctx.lineTo(x + 10, e.y + e.h);
+          ctx.lineTo(x + 20, e.y);
+        } else {
+          ctx.moveTo(x, e.y + e.h);
+          ctx.lineTo(x + 10, e.y);
+          ctx.lineTo(x + 20, e.y + e.h);
+        }
         ctx.fill();
       }
     }
   }
 
-  if (faseAtual.cenario === "casa") chamar("desenharDetalhesCasa");   // detalhes dos degraus
+  if (faseAtual.cenario === "casa") chamar("desenharDetalhesCasa");   // detalhes das tábuas e móveis
 
   desenharBlocos();                                  // blocos estilizados, antes do chão/grama
   if (faseAtual.cenario === "cidade") {
     desenharChao();
-  } else {
-    desenharGrama();      // na casa, as plataformas com semGrama: true são puladas
+  } else if (faseAtual.cenario !== "casa") {
+    desenharGrama();                                 // na casa não tem grama
   }
 
   desenharObjetos();
   desenharObjetosCidade();
-  if (faseAtual.cenario === "casa") chamar("desenharDecoracaoCasa");   // abóboras, quadros, morcegos...
+  if (faseAtual.cenario === "casa") chamar("desenharDecoracaoCasa");   // abóboras, quadros, armários...
   if (!emMenu()) desenharInstrucoes();
 
   // Luz que marca o fim da fase
@@ -198,29 +257,40 @@ function desenhar() {
   ctx.fillRect(luz.x, luz.y, luz.w, luz.h);
   ctx.restore();
 
-  desenharLanterna(75);
-  desenharBoneco();
+  if (faseAtual.cenario !== "casa") desenharLanterna(75);
+  if (!jogador.escondido) desenharBoneco();          // escondido no armário: o boneco some
   desenharAbrigos();
   desenharFrenteCidade();
-  desenharMonstro();
+  if (faseAtual.monstro !== false) desenharMonstro();
+  if (typeof depurar !== "undefined" && depurar) desenharHitboxes();
   ctx.restore();
 
   // ===== 3) POR CIMA DE TUDO (fixo na tela) =====
+  if (estado !== "venceu") {
+    chamar("desenharEscuridaoRush");   // escurece tudo (sobra uma luz em volta do jogador)
+    chamar("desenharDicasRush");       // armários brilham no escuro e mostram a dica do Shift
+    chamar("desenharRush");            // o monstro por cima do escuro
+  }
   if (faseAtual.cenario === "cidade") desenharCinzas();
 
   ctx.fillStyle = vinheta;
   ctx.fillRect(0, 0, LARGURA, ALTURA);
 
+  chamar("desenharSustoRush");         // o jumpscare, por cima de tudo
+
   if (emMenu()) { chamar("desenharMenu"); return; }
 
-  ctx.fillStyle = "rgba(255,255,255,0.75)";
-  ctx.font = "16px Georgia, serif";
-  ctx.textAlign = "left";
-  ctx.fillText("Mortes: " + mortes, 16, 28);
-  ctx.fillText("Fase " + (numeroFase + 1), 16, 48);
+  if (estado !== "susto") {
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.font = "16px Georgia, serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Mortes: " + mortes, 16, 28);
+    ctx.fillText("Fase " + (numeroFase + 1), 16, 48);
+  }
 
   if (estado === "morto") {
-    ctx.fillStyle = "rgba(0,0,0," + Math.min(1, 1.2 - contador / 50) + ")";
+    const preto = typeof rush !== "undefined" && rush.preto;   // depois do susto: preto direto
+    ctx.fillStyle = "rgba(0,0,0," + (preto ? 1 : Math.min(1, 1.2 - contador / 50)) + ")";
     ctx.fillRect(0, 0, LARGURA, ALTURA);
   }
   if (estado === "venceu") {
@@ -232,4 +302,20 @@ function desenhar() {
       ALTURA / 2 + 30, 18
     );
   }
+}
+
+
+// Aperte H para ver as hitboxes: azul = plataformas, vermelho = espinhos, verde = jogador, amarelo = luz final
+function desenharHitboxes() {
+  ctx.save();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = "#4af";
+  for (const p of plataformas) ctx.strokeRect(p.x, p.y, p.w, p.h);
+  ctx.strokeStyle = "#f33";
+  for (const e of espinhos) ctx.strokeRect(e.x + 4, e.y + 6, e.w - 8, e.h - 6);
+  ctx.strokeStyle = "#3f3";
+  ctx.strokeRect(jogador.x, jogador.y, jogador.w, jogador.h);
+  ctx.strokeStyle = "#fd3";
+  ctx.strokeRect(luz.x, luz.y, luz.w, luz.h);
+  ctx.restore();
 }

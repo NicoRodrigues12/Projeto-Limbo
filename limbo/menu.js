@@ -1,4 +1,4 @@
-// =====================================================
+RD// =====================================================
 // MENU: tela inicial (Jogar) e escolha de fases
 //   estado "menu"  = tela inicial
 //   estado "fases" = escolha da fase
@@ -19,7 +19,7 @@ const mouse = { x: -1, y: -1 };
 const botaoJogar = { x: LARGURA / 2 - 90, y: 270, w: 180, h: 46, texto: "Jogar" };
 const botaoVoltar = { x: 16, y: 16, w: 90, h: 32, texto: "Voltar" };
 
-const CARD_W = 200, CARD_H = 120, CARD_GAP = 30, CARDS_POR_LINHA = 3;
+const CARD_W = 110, CARD_H = 120, CARD_GAP = 30, CARDS_POR_LINHA = 3;
 
 function retanguloFase(i) {
   const linha = Math.floor(i / CARDS_POR_LINHA);
@@ -28,7 +28,7 @@ function retanguloFase(i) {
   const largTotal = naLinha * CARD_W + (naLinha - 1) * CARD_GAP;
   return {
     x: (LARGURA - largTotal) / 2 + col * (CARD_W + CARD_GAP),
-    y: 130 + linha * (CARD_H + 50),
+    y: 110 + linha * (CARD_H + 44),
     w: CARD_W,
     h: CARD_H,
   };
@@ -107,7 +107,7 @@ function desenharBotao(b) {
 function desenharCardFase(i) {
   const r = retanguloFase(i);
   const f = FASES[i];
-  const pal = PALETAS[f.paleta];
+  const pal = PALETAS[f.paleta] || PALETAS[0];
   const liberada = faseLiberada(i);
   const hover = liberada && dentroDe(r, mouse.x, mouse.y);
 

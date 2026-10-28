@@ -38,7 +38,7 @@ function camadaPredios(velocidade, opacidade, espaco, alturaBase) {
 
   ctx.globalAlpha = 1;
 }
-  // Colunas de fumaça subindo ao longe
+
   function desenharFumaca() {
     const t = performance.now() / 1000;
     for (let k = 0; k < 8; k++) {

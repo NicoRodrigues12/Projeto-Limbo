@@ -117,8 +117,10 @@ const monstro = {
   alpha: 0,
   velocidade: 0.8
 };
+
 let estado;            // "jogando", "morto" ou "venceu"
-let camera;            // quanto a tela já "andou" para a direita
+let camera;
+let cameraY = 0;       // altura da câmera (só muda nas fases verticais)            // quanto a tela já "andou" para a direita
 let contador;          // tempo da tela escura quando morre
 let mortes = 0;
 
@@ -134,11 +136,15 @@ function reiniciar() {
   jogador.agachado = false
   estado = "jogando";
   camera = 0;
+  cameraY = 0;
   contador = 0;
 
   monstro.ativo = false;
 monstro.alpha = 0;
 monstro.espera = 100 + Math.random() * 200;
+if (typeof aoReiniciar === "function") aoReiniciar();
+jogador.escondido = false;
+if (typeof reiniciarRush === "function") reiniciarRush();
 }
 
 function morrer() {

@@ -13,7 +13,7 @@ async function salvarPontuacao(pontos, tempo) {
     duration: tempo,
   };
 
-  var responde = await fetch("http://10.1.136.170:3000/scores", {
+  var response = await fetch("http://10.1.136.170:3000/scores", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(dados)
@@ -21,6 +21,6 @@ async function salvarPontuacao(pontos, tempo) {
 }
 
 
-if(responde.ok){
+if(respone.ok){
   alert("Pontuação salva com sucesso!");
 }
