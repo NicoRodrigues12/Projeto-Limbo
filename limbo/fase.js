@@ -29,6 +29,16 @@ function beirada(x, y, w) {
   return { x, y, w, h: 14, tipo: "assoalho" };
 }
 
+// Trecho de caverna: um teto (desce a partir do chão da floresta, y = 380) e um piso.
+// Os dois levam "rocha" para o caverna.js desenhar as saliências nas bordas.
+// A folga (piso - teto) manda: 46 = só agachado; 140 ou mais = dá para pular.
+function trecho(x, w, tetoY, pisoY) {
+  return [
+    { x, y: 380,   w, h: tetoY - 380, rocha: "teto" },
+    { x, y: pisoY, w, h: 300,         rocha: "piso", semGrama: true },
+  ];
+}
+
 
 const FASES = [
   // ---------------------------------------------------
@@ -217,7 +227,9 @@ const FASES = [
     fim: 800,            // a fase tem a largura da tela: a câmera não anda para os lados
     vertical: true,
     topo: -1760,         // até onde a câmera sobe
-    monstro: false,      // sem o olho nesta fase
+    monstro: false,       // sem o olho nesta fase
+    aranha: true,
+    aranhaGatilho: { x: 2560, w: 220 },      
     rush: true,          // o monstro novo    // sem o olho nesta fase
 
     plataformas: [
@@ -333,11 +345,109 @@ const FASES = [
     // ===== DECORAÇÃO EXTRA ... =====
     { tipo: "lampada", x: 210, y: 240, comp: 50, cor: "laranja" },
     // ... todo o resto da decoração ...
-    { tipo: "teia", x: 0, y: -1280, aranha: true },
-
+    { tipo: "teia", x: 0, y: -1280, aranha: true }
   ],     // fecha o array objetos
-},       // fecha a fase
+},    
+
+  // ---------------------------------------------------
+  // FASE 4: caverna (floresta + chão falso + caverna ondulada)
+  //   Dois trechos têm teto baixo (folga 46): só passa agachado.
+  //   Precisa do caverna.js (versão nova), que desenha o fundo e as saliências.
+  // ---------------------------------------------------
+  {
+    nome: "Caverna",
+    cenario: "floresta",
+    paleta: 0,
+    fim: 5200,
+    vertical: true,
+    topo: 0,
+    base: 440,
+    ancora: 360,
+    camVel: 0.45,
+    limiteQueda: 1000,
+    monstro: false,
+
+    plataformas: [
+      // --- floresta ---
+      { x: 0,    y: 380, w: 1500, h: 600 },
+      { x: 380,  y: 340, w: 40,   h: 40,  estilo: "caixote" },
+      { x: 880,  y: 300, w: 120,  h: 20,  estilo: "tabua" },
+      { x: 1180, y: 340, w: 60,   h: 40,  estilo: "pedra" },
+      { x: 1240, y: 300, w: 60,   h: 80,  estilo: "pedra" },
+
+      // --- o chão falso ---
+      { x: 1500, y: 380, w: 200,  h: 100, falso: true, atraso: 2 },
+
+      // --- caverna: fundo do poço + trechos (x, largura, y do teto, y do piso) ---
+      { x: 1500, y: 800, w: 200,  h: 300, rocha: "piso", semGrama: true },
+      ...trecho(1700, 300, 620, 800),    //  1  entrada
+      ...trecho(2000, 300, 570, 750),    //  2  sobe 50 (pula)
+      ...trecho(2300, 260, 600, 780),    //  3  desce
+      ...trecho(2560, 220, 734, 780),    //  4  TETO BAIXO: agachar
+      ...trecho(2780, 300, 630, 810),    //  5  desce
+      ...trecho(3080, 270, 580, 740),    //  6  sobe 70 (pula)
+      ...trecho(3350, 250, 520, 700),    //  7  sobe 40: ponto mais alto
+      ...trecho(3600, 300, 600, 790),    //  8  desce 90
+      ...trecho(3900, 240, 744, 790),    //  9  TETO BAIXO: agachar
+      ...trecho(4140, 300, 610, 790),    // 10
+      ...trecho(4440, 260, 570, 750),    // 11  sobe 40 (pula)
+      ...trecho(4700, 300, 590, 770),    // 12  chegada
+      { x: 5000, y: 380, w: 400, h: 700, semGrama: true },   // parede do fim
+    ],
+
+    espinhos: [
+      { x: 1860, y: 780, w: 60, h: 20 },
+      { x: 2200, y: 730, w: 40, h: 20 },
+      { x: 2420, y: 760, w: 40, h: 20 },
+      { x: 2920, y: 790, w: 60, h: 20 },
+      { x: 3530, y: 680, w: 40, h: 20 },
+      { x: 3740, y: 770, w: 60, h: 20 },
+      { x: 4260, y: 770, w: 60, h: 20 },
+      { x: 4640, y: 730, w: 40, h: 20 },
+      { x: 4830, y: 750, w: 40, h: 20 },
+    ],
+
+    // poco = a abertura no chão da floresta; fim = onde a caverna acaba;
+    // fundo = até onde o vazio é desenhado
+    caverna: { poco: { x: 1500, y: 380, w: 200 }, fim: 5000, fundo: 900 },
+
+    luz: { x: 4940, y: 680, w: 10, h: 90 },
+
+    objetos: [
+      // floresta
+      { tipo: "placa",     x: 170 },
+      { tipo: "pedra",     x: 290, s: 1 },
+      { tipo: "moita",     x: 330 },
+      { tipo: "toco",      x: 520 },
+      { tipo: "muro",      x: 545 },
+      { tipo: "cerca",     x: 740 },
+      { tipo: "tronco",    x: 900 },
+      { tipo: "cogumelos", x: 960 },
+      { tipo: "corrente",  x: 1000, y: 0, comp: 120 },
+      { tipo: "lanterna",  x: 1100 },
+      { tipo: "galhos",    x: 1335 },
+      { tipo: "moita",     x: 1450 },
+      { tipo: "lanterna",  x: 1800 },
+      { tipo: "tronco",    x: 1900 },
+      { tipo: "lapide",    x: 2050 },
+      // caverna
+      { tipo: "cogumelos", x: 1780, y: 800 },
+      { tipo: "pedra",     x: 2100, y: 750, s: 0.8 },
+      { tipo: "corrente",  x: 2150, y: 600, comp: 60 },
+      { tipo: "cogumelos", x: 2380, y: 780 },
+      { tipo: "pedra",     x: 3200, y: 740, s: 0.8 },
+      { tipo: "corrente",  x: 3480, y: 560, comp: 50 },
+      { tipo: "cogumelos", x: 3700, y: 790 },
+      { tipo: "corrente",  x: 4300, y: 610, comp: 70 },
+      { tipo: "cogumelos", x: 4500, y: 750 },
+      { tipo: "pedra",     x: 4740, y: 770, s: 1 },
+    ],
+  },
+  
+// fecha a fase
 ];       // fecha o F
+
+
 
 // O que a fase atual está usando (preenchido por carregarFase)
 let faseAtual;

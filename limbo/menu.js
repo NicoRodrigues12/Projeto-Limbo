@@ -1,4 +1,4 @@
-RD// =====================================================
+// =====================================================
 // MENU: tela inicial (Jogar) e escolha de fases
 //   estado "menu"  = tela inicial
 //   estado "fases" = escolha da fase
@@ -19,7 +19,7 @@ const mouse = { x: -1, y: -1 };
 const botaoJogar = { x: LARGURA / 2 - 90, y: 270, w: 180, h: 46, texto: "Jogar" };
 const botaoVoltar = { x: 16, y: 16, w: 90, h: 32, texto: "Voltar" };
 
-const CARD_W = 110, CARD_H = 120, CARD_GAP = 30, CARDS_POR_LINHA = 3;
+const CARD_W = 200, CARD_H = 110, CARD_GAP = 30, CARDS_POR_LINHA = 3;
 
 function retanguloFase(i) {
   const linha = Math.floor(i / CARDS_POR_LINHA);

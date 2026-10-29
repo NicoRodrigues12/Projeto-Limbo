@@ -6,7 +6,7 @@ const ALTURA = canvas.height;
 
 const GRAVIDADE = 0.6;
 const VELOCIDADE = 3.5;
-const FORCA_PULO = -13;
+const FORCA_PULO = -35;
 const ESCALA = 2;
 
 let depurar = false;

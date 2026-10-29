@@ -44,8 +44,9 @@ function desenharGrama() {
   ctx.lineWidth = 1.6;
 
   for (const p of plataformas) {
-    if (p.x + p.w < camera - 20 || p.x > camera + LARGURA + 20) continue;
-    if(p.semGrama) continue   // fora da tela
+    if (p.x + p.w < camera - 20 || p.x > camera + LARGURA + 20) continue;   // fora da tela
+    if (p.semGrama || p.estilo) continue;                                   // sem grama em blocos
+
     const ini = Math.max(p.x + 2, Math.floor(camera / 4) * 4 - 8);
     const fim = Math.min(p.x + p.w - 2, camera + LARGURA + 8);
 

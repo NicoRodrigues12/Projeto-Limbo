@@ -145,6 +145,10 @@ monstro.espera = 100 + Math.random() * 200;
 if (typeof aoReiniciar === "function") aoReiniciar();
 jogador.escondido = false;
 if (typeof reiniciarRush === "function") reiniciarRush();
+     jogador.escondido = false;
+     if (typeof reiniciarRush === "function") reiniciarRush();
+     if (typeof reiniciarAranha === "function") reiniciarAranha();
+   
 }
 
 function morrer() {

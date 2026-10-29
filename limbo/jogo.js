@@ -121,7 +121,7 @@ function atualizar(dt) {
   // --- perigos ---
   for (const e of espinhos) {
     // hitbox um pouco menor que o desenho, para ser justo com quem joga
-    const caixa = { x: e.x + 4, y: e.y + 6, w: e.w - 8, h: e.h - 6 };
+    const caixa = caixaEspinho(e);
     if (colide(jogador, caixa)) morrer();
   }
   if (jogador.y > (faseAtual.limiteQueda || ALTURA + 80)) morrer();   // caiu no buraco
@@ -150,8 +150,8 @@ function atualizar(dt) {
   // o Rush (fases com "rush: true"): luzes piscam, escurece e ele passa correndo
   if (faseAtual.rush && typeof atualizarRush === "function") atualizarRush(dt);
   if (typeof atualizarFalsos === "function") atualizarFalsos(dt);   // chão falso
+  if (faseAtual.aranha && typeof atualizarAranha === "function") atualizarAranha(dt);
 }
-
 
 // Vinheta escura nas bordas da tela.
 const vinheta = ctx.createRadialGradient(LARGURA / 2, ALTURA / 2, 150, LARGURA / 2, ALTURA / 2, 480);
@@ -197,8 +197,9 @@ function desenhar() {
 
   // ===== 2) MUNDO (acompanha a câmera, por cima do fundo) =====
   ctx.save();
-  const tr = chamar("tremorRush") || { x: 0, y: 0 };    // tremor da tela (só no Rush)
-  ctx.translate(-Math.round(camera) + tr.x, -Math.round(cameraY) + tr.y);
+  const tr = chamar("tremorRush") || { x: 0, y: 0 };
+  const ta = chamar("tremorAranha") || { x: 0, y: 0 };
+  ctx.translate(-Math.round(camera) + tr.x + ta.x, -Math.round(cameraY) + tr.y + ta.y);
 
   if (faseAtual.cenario === "casa") chamar("desenharCasa");   // paredes, janelas e telhado
   if (faseAtual.caverna) chamar("desenharCaverna");   // o vazio do poço e do túnel
@@ -260,6 +261,7 @@ function desenhar() {
   if (faseAtual.cenario !== "casa") desenharLanterna(75);
   if (!jogador.escondido) desenharBoneco();          // escondido no armário: o boneco some
   desenharAbrigos();
+  chamar("desenharAranha");
   desenharFrenteCidade();
   if (faseAtual.monstro !== false) desenharMonstro();
   if (typeof depurar !== "undefined" && depurar) desenharHitboxes();
