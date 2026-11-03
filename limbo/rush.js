@@ -7,8 +7,8 @@
 // =====================================================
 
 // ---------- AJUSTES (tempo em quadros: 60 = 1 segundo) ----------
-const RUSH_PRIMEIRA_ESPERA = [300, 540];   // antes da 1ª vez: de 5 a 9 s
-const RUSH_ESPERA = [420, 840];            // entre uma vez e outra: de 7 a 14 s
+const RUSH_PRIMEIRA_ESPERA = [200, 340];   // antes da 1ª vez: de 5 a 9 s
+const RUSH_ESPERA = [320, 640];            // entre uma vez e outra: de 7 a 14 s
 const RUSH_AVISO = 210;                    // luzes piscando antes dele aparecer (3,5 s)
 const RUSH_VELOCIDADE = 20;                // pixels por quadro quando ele passa
 const RUSH_TREMOR_MAX = 70;                // força do tremor da tela, em pixels
