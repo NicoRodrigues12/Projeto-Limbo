@@ -125,8 +125,10 @@ let contador;          // tempo da tela escura quando morre
 let mortes = 0;
 
 function reiniciar() {
-  jogador.x = 60;
-  jogador.y = 380 - jogador.h;
+  jogador.h = ALTURA_EM_PE;
+  const ini = (typeof inicioMina === "function" && inicioMina()) || { x: 60, y: 380 };
+  jogador.x = ini.x;
+  jogador.y = ini.y - jogador.h;
   jogador.vx = 0;
   jogador.vy = 0;
   jogador.noChao = false;
@@ -148,6 +150,7 @@ if (typeof reiniciarRush === "function") reiniciarRush();
      jogador.escondido = false;
      if (typeof reiniciarRush === "function") reiniciarRush();
      if (typeof reiniciarAranha === "function") reiniciarAranha();
+     if (typeof reiniciarMina === "function") reiniciarMina();
    
 }
 

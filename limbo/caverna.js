@@ -15,7 +15,7 @@ function aoReiniciar() {
   for (const p of faseAtual.plataformas) delete p.cai;
   entulho = [];
   camPisoCav = 0;
-    if (typeof reiniciarMina === "function") reiniciarMina();
+    if (typeof reiniciarCarrinhoMina === "function") reiniciarCarrinhoMina();
 }
 
 function desmoronar(p) {
@@ -83,7 +83,7 @@ function atualizarFalsos(dt) {
     camPisoCav += ((dentro ? pisoCam : 0) - camPisoCav) * Math.min(1, 0.12 * dt);
     if (cameraY < camPisoCav) cameraY = camPisoCav;
   }
-    if (typeof atualizarMina === "function") atualizarMina(dt);
+    if (typeof atualizarCarrinhoMina === "function") atualizarCarrinhoMina(dt);
 }
 
 function desenharEntulho() {
@@ -101,7 +101,7 @@ function desenharEntulho() {
   }
   ctx.restore();
   desenharAcabamentoCaverna();   // o jogo.js chama esta função logo depois das plataformas
-    if (faseAtual.mina && typeof desenharMina === "function") desenharMina();
+    if (faseAtual.mina && typeof desenharCarrinhoMina === "function") desenharCarrinhoMina();
 }
 
 // ---------- as rochas (teto e piso do corredor) ----------

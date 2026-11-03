@@ -17,7 +17,7 @@ const MINA_CFG = {
 let carrinhoMina = null;
 
 // Chamada pelo aoReiniciar() do caverna.js
-function reiniciarMina() {
+function reiniciarCarrinhoMina() {
   carrinhoMina = null;
   const m = faseAtual.mina;
   if (!m) return;
@@ -33,7 +33,7 @@ function reiniciarMina() {
 }
 
 // Chamada pelo atualizarFalsos() do caverna.js
-function atualizarMina(dt) {
+function atualizarCarrinhoMina(dt) {
   const c = carrinhoMina;
   const m = faseAtual.mina;
   if (!c || !m || estado !== "jogando") return;
@@ -93,7 +93,7 @@ function atualizarMina(dt) {
 }
 
 // ---------- desenho ----------
-function desenharMina() {
+function desenharCarrinhoMina() {
   const m = faseAtual.mina;
   if (!m) return;
   const t = performance.now() / 1000;

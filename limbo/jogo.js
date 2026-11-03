@@ -70,6 +70,9 @@ function atualizar(dt) {
     }
   }
 
+  // plataformas que andam (vagonete e elevador da mina) levam o jogador junto
+  if (typeof atualizarMoveisMina === "function") atualizarMoveisMina(dt);
+
   // --- movimento horizontal ---
   const velocidade = jogador.agachado ? VELOCIDADE * 0.4 : VELOCIDADE;   // agachado anda devagar
   jogador.vx = 0;
@@ -93,6 +96,7 @@ function atualizar(dt) {
   // --- movimento vertical (gravidade) ---
   const baseAntes = jogador.y + jogador.h;      // onde estavam os pés antes de mover
   jogador.vy += GRAVIDADE * dt;
+  if (faseAtual.velMax && jogador.vy > faseAtual.velMax) jogador.vy = faseAtual.velMax;   // queda não passa disto
   jogador.y += jogador.vy * dt;
   jogador.noChao = false;
   for (const p of plataformas) {
@@ -120,9 +124,7 @@ function atualizar(dt) {
 
   // --- perigos ---
   for (const e of espinhos) {
-    // hitbox um pouco menor que o desenho, para ser justo com quem joga
-    const caixa = caixaEspinho(e);
-    if (colide(jogador, caixa)) morrer();
+    if (colide(jogador, caixaEspinho(e))) morrer();
   }
   if (jogador.y > (faseAtual.limiteQueda || ALTURA + 80)) morrer();   // caiu no buraco
 
@@ -134,8 +136,10 @@ function atualizar(dt) {
   camera = Math.max(0, Math.min(jogador.x - LARGURA / 3, FIM_DO_MUNDO - LARGURA));
 
   // câmera vertical: segue o jogador suavemente, só nas fases com "vertical: true"
+  // (a âncora pode ser um número ou uma função: onde o boneco aparece na tela)
   if (faseAtual.vertical) {
-    const alvo = Math.max(faseAtual.topo, Math.min(faseAtual.base || 0, jogador.y + jogador.h / 2 - (faseAtual.ancora || ALTURA * 0.55)));
+    const anc = typeof faseAtual.ancora === "function" ? faseAtual.ancora() : (faseAtual.ancora || ALTURA * 0.55);
+    const alvo = Math.max(faseAtual.topo, Math.min(faseAtual.base || 0, jogador.y + jogador.h / 2 - anc));
     cameraY += (alvo - cameraY) * Math.min(1, (faseAtual.camVel || 0.15) * dt);
   } else {
     cameraY = 0;
@@ -149,9 +153,11 @@ function atualizar(dt) {
 
   // o Rush (fases com "rush: true"): luzes piscam, escurece e ele passa correndo
   if (faseAtual.rush && typeof atualizarRush === "function") atualizarRush(dt);
-  if (typeof atualizarFalsos === "function") atualizarFalsos(dt);   // chão falso
+  if (typeof atualizarFalsos === "function") atualizarFalsos(dt);   // chão falso e pontes podres
   if (faseAtual.aranha && typeof atualizarAranha === "function") atualizarAranha(dt);
+  if (typeof atualizarMina === "function") atualizarMina(dt);       // checkpoints, queda e pingentes da fase 5
 }
+
 
 // Vinheta escura nas bordas da tela.
 const vinheta = ctx.createRadialGradient(LARGURA / 2, ALTURA / 2, 150, LARGURA / 2, ALTURA / 2, 480);
@@ -160,8 +166,8 @@ vinheta.addColorStop(1, "rgba(0,0,0,0.65)");
 
 function desenhar() {
   // ===== 1) FUNDO (tudo aqui fica ATRÁS de todo o resto) =====
-  if (faseAtual.cenario === "casa") {
-    ctx.fillStyle = "#050308";           // dentro da casa não tem céu (assim o tremor não mostra faixa)
+  if (faseAtual.cenario === "casa" || faseAtual.cenario === "mina") {
+    ctx.fillStyle = "#050308";           // dentro da casa/mina não tem céu (assim o tremor não mostra faixa)
   } else {
     const ceu = ctx.createLinearGradient(0, 0, 0, ALTURA);
     ceu.addColorStop(0, paleta.ceuCima);
@@ -193,16 +199,20 @@ function desenhar() {
     nev.addColorStop(1, rgba(paleta.ceuBaixo, 0.45));
     ctx.fillStyle = nev;
     ctx.fillRect(0, 200, LARGURA, 250);
+  } else if (faseAtual.cenario === "mina") {
+    chamar("desenharFundoMina");          // colunas de pedra, madeira ao longe e névoa
   }
 
   // ===== 2) MUNDO (acompanha a câmera, por cima do fundo) =====
   ctx.save();
-  const tr = chamar("tremorRush") || { x: 0, y: 0 };
+  const tr = chamar("tremorRush") || { x: 0, y: 0 };    // tremor da tela (Rush, aranha e queda da mina)
   const ta = chamar("tremorAranha") || { x: 0, y: 0 };
-  ctx.translate(-Math.round(camera) + tr.x + ta.x, -Math.round(cameraY) + tr.y + ta.y);
+  const tm = chamar("tremorMina") || { x: 0, y: 0 };
+  ctx.translate(-Math.round(camera) + tr.x + ta.x + tm.x, -Math.round(cameraY) + tr.y + ta.y + tm.y);
 
   if (faseAtual.cenario === "casa") chamar("desenharCasa");   // paredes, janelas e telhado
-  if (faseAtual.caverna) chamar("desenharCaverna");   // o vazio do poço e do túnel
+  if (faseAtual.caverna) chamar("desenharCaverna");           // o vazio do poço e do túnel
+  if (faseAtual.cenario === "mina") chamar("desenharAbismoMina");   // o desfiladeiro
 
   // plataformas lisas (as com "estilo" e as "invisivel" se desenham sozinhas)
   ctx.fillStyle = "#050505";
@@ -210,14 +220,16 @@ function desenhar() {
     if (p.estilo) continue;
     if (p.invisivel && p.h !== 100) continue;
     ctx.fillRect(p.x, p.y, p.w, p.h);
-  }  
+  }
   chamar("desenharEntulho");
 
-  // perigos: cones na cidade, espinhos nas outras fases
-   for (const e of espinhos) {
+  // perigos: cones na cidade, ferros enferrujados na mina, espinhos nas outras fases
+  for (const e of espinhos) {
     if (e.suporte) continue;                        // os triângulos das beiradas já vêm do casa.js
     if (faseAtual.cenario === "cidade") {
       desenharCones(e);
+    } else if (faseAtual.cenario === "mina") {
+      desenharPuasMina(e);
     } else {
       ctx.fillStyle = "#050505";
       for (let x = e.x; x < e.x + e.w; x += 20) {   // um triângulo a cada 20 de largura
@@ -241,12 +253,13 @@ function desenhar() {
   desenharBlocos();                                  // blocos estilizados, antes do chão/grama
   if (faseAtual.cenario === "cidade") {
     desenharChao();
-  } else if (faseAtual.cenario !== "casa") {
-    desenharGrama();                                 // na casa não tem grama
+  } else if (faseAtual.cenario !== "casa" && faseAtual.cenario !== "mina") {
+    desenharGrama();                                 // na casa e na mina não tem grama
   }
 
   desenharObjetos();
   desenharObjetosCidade();
+  if (faseAtual.cenario === "mina") chamar("desenharMundoMina");      // bordas de pedra, pontes, objetos, pingentes
   if (faseAtual.cenario === "casa") chamar("desenharDecoracaoCasa");   // abóboras, quadros, armários...
   if (!emMenu()) desenharInstrucoes();
 
@@ -258,10 +271,10 @@ function desenhar() {
   ctx.fillRect(luz.x, luz.y, luz.w, luz.h);
   ctx.restore();
 
-  if (faseAtual.cenario !== "casa") desenharLanterna(75);
+  if (faseAtual.cenario !== "casa" && faseAtual.cenario !== "mina") desenharLanterna(75);
   if (!jogador.escondido) desenharBoneco();          // escondido no armário: o boneco some
   desenharAbrigos();
-  chamar("desenharAranha");
+  chamar(typeof desenharAranhaCaverna === "function" ? "desenharAranhaCaverna" : "desenharAranha");   // a aranha da fase 4 (aceita os dois nomes)
   desenharFrenteCidade();
   if (faseAtual.monstro !== false) desenharMonstro();
   if (typeof depurar !== "undefined" && depurar) desenharHitboxes();
@@ -273,11 +286,16 @@ function desenhar() {
     chamar("desenharDicasRush");       // armários brilham no escuro e mostram a dica do Shift
     chamar("desenharRush");            // o monstro por cima do escuro
   }
+  if (faseAtual.cenario === "mina") {
+    chamar("desenharEscuridaoMina");   // a escuridão da mina, com as luzes abertas nela
+    chamar("desenharQuedaMina");       // vento da queda, clarão do impacto e título
+  }
   if (faseAtual.cenario === "cidade") desenharCinzas();
 
   ctx.fillStyle = vinheta;
   ctx.fillRect(0, 0, LARGURA, ALTURA);
 
+  chamar("desenharTensaoAranha");      // bordas vermelhas quando a aranha está perto
   chamar("desenharSustoRush");         // o jumpscare, por cima de tudo
 
   if (emMenu()) { chamar("desenharMenu"); return; }
@@ -314,7 +332,10 @@ function desenharHitboxes() {
   ctx.strokeStyle = "#4af";
   for (const p of plataformas) ctx.strokeRect(p.x, p.y, p.w, p.h);
   ctx.strokeStyle = "#f33";
-  for (const e of espinhos) ctx.strokeRect(e.x + 4, e.y + 6, e.w - 8, e.h - 6);
+  for (const e of espinhos) {
+    const c = caixaEspinho(e);
+    ctx.strokeRect(c.x, c.y, c.w, c.h);
+  }
   ctx.strokeStyle = "#3f3";
   ctx.strokeRect(jogador.x, jogador.y, jogador.w, jogador.h);
   ctx.strokeStyle = "#fd3";
