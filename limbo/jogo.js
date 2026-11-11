@@ -306,6 +306,7 @@ function desenhar() {
     ctx.textAlign = "left";
     ctx.fillText("Mortes: " + mortes, 16, 28);
     ctx.fillText("Fase " + (numeroFase + 1), 16, 48);
+    ctx.fillText("Pontos: " + pontos(), 16, 68);     // <- nova
   }
 
   if (estado === "morto") {
@@ -321,6 +322,7 @@ function desenhar() {
       numeroFase < FASES.length - 1 ? "Aperte Enter para a próxima fase" : "Aperte Enter para jogar de novo",
       ALTURA / 2 + 30, 18
     );
+    textoCentral("Pontos: " + pontos(), ALTURA / 2 + 62, 18);   // <- nova linha
   }
 }
 
