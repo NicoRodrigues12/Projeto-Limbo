@@ -30,9 +30,10 @@ function atualizar(dt) {
     if (contador <= 0) reiniciar();
     return;
   }
-  if (estado === "venceu") {
+    if (estado === "venceu") {
     if (teclas["Enter"]) {
       if (numeroFase < FASES.length - 1) {
+        faseMaisAlcancada = Math.max(faseMaisAlcancada, numeroFase + 1);   // libera a próxima
         carregarFase(numeroFase + 1);
       } else {
         mortes = 0;
@@ -129,7 +130,10 @@ function atualizar(dt) {
   if (jogador.y > (faseAtual.limiteQueda || ALTURA + 80)) morrer();   // caiu no buraco
 
   // --- chegou na luz? ---
-  if (colide(jogador, luz)) estado = "venceu";
+  if (colide(jogador, luz)) {
+    estado = "venceu";
+    faseMaisAlcancada = Math.max(faseMaisAlcancada, Math.min(numeroFase + 1, FASES.length - 1));
+  }
 
   // --- animação e câmera ---
   if (jogador.vx !== 0) jogador.anim += dt;

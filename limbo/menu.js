@@ -6,8 +6,11 @@
 const TITULO_JOGO = "LIMBO";
 
 // Quando quiser bloquear fases, mude aqui (ex.: return i <= faseMaisAlcancada;)
+// Só a fase 1 começa liberada. Cada fase vencida libera a próxima.
+let faseMaisAlcancada = 0;
+
 function faseLiberada(i) {
-  return true;
+  return i <= faseMaisAlcancada;
 }
 
 function noMenu() {
